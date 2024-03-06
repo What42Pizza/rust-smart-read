@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "complex but easy ways to read user input"
+repository = "https://github.com/What42Pizza/rust-smart-read"
+readme = "readme.md"
 keywords = ["stdin", "io", "read", "input"]
 categories = ["command-line-interface"]
 

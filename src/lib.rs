@@ -15,6 +15,36 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 
 /// reads a line of text, a number, etc
+/// 
+/// Note: Some ReadLine implementations (currently, `ReadLine for Vec<T>`) have special syntax. All other implementations have to use read!(argument) or prompt!(argument)
+/// 
+/// Existing functionalities:
+/// 
+/// 
+/// Input Options
+/// These allow you to choose between multiple options. Example: read!(= 1, 2, 3), or read!(&["a", "b", "c"]), etc
+/// 
+/// Implemented types:
+/// impl<T: ToString + Clone>    ReadLine for &[T]
+/// impl<T: ToString + Clone>    ReadLine for &[T; LEN]
+/// impl<T: ToString + Clone>    ReadLine for Vec<T>
+/// impl<T: ToString + Clone>    ReadLine for VecDeque<T>
+/// impl<K, T: ToString + Clone> ReadLine for HashMap<K, T>
+/// impl<T: ToString + Clone>    ReadLine for LinkedList<T>
+/// 
+/// 
+/// Ranges
+/// These allow you to take a number within a specified range. Example: read!(1. .. 100.), or read!(10..), etc
+/// 
+/// Implemented types:
+/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for Range<T>
+/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeInclusive<T>
+/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeTo<T>
+/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeFrom<T>
+/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeToInclusive<T>
+/// 
+/// 
+/// If you have ideas for more functionality, feel free to open an issue
 #[macro_export]
 macro_rules! read {
 	($($args:tt)*) => {
