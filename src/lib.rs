@@ -1,5 +1,9 @@
 // started      24/03/05
-// last updated 24/03/05
+// last updated 24/03/06
+
+
+
+#![feature(let_chains)]
 
 
 
@@ -16,21 +20,23 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 /// reads a line of text, a number, etc
 /// 
-/// Note: Some ReadLine implementations (currently, `ReadLine for Vec<T>`) have special syntax. All other implementations have to use read!(argument) or prompt!(argument)
+/// General syntax:
+/// read!([default_value] ...) // works with prompt, like prompt!("Give input: "; [3])
+/// 
 /// 
 /// Existing functionalities:
 /// 
 /// 
 /// Input Options
-/// These allow you to choose between multiple options. Example: read!(= 1, 2, 3), or read!(&["a", "b", "c"]), etc
+/// These allow you to specify which inputs are allowed. Example: read!(&["a", "b", "c"])
+/// Special syntax: read!(= 1, 2, 3)
 /// 
 /// Implemented types:
-/// impl<T: ToString + Clone>    ReadLine for &[T]
-/// impl<T: ToString + Clone>    ReadLine for &[T; LEN]
-/// impl<T: ToString + Clone>    ReadLine for Vec<T>
-/// impl<T: ToString + Clone>    ReadLine for VecDeque<T>
-/// impl<K, T: ToString + Clone> ReadLine for HashMap<K, T>
-/// impl<T: ToString + Clone>    ReadLine for LinkedList<T>
+/// impl<T: ToString + Clone> ReadLine for ReadData<T, &[T]>
+/// impl<T: ToString + Clone> ReadLine for ReadData<T, &[T; LEN]>
+/// impl<T: ToString + Clone> ReadLine for ReadData<T, Vec<T>>
+/// impl<T: ToString + Clone> ReadLine for ReadData<T, VecDeque<T>>
+/// impl<T: ToString + Clone> ReadLine for ReadData<T, LinkedList<T>>
 /// 
 /// 
 /// Ranges
@@ -58,15 +64,27 @@ macro_rules! try_read {
 	() => {
 		smart_read::read_string()
 	};
-	($input:expr) => {{
-		use smart_read::ReadLine;
-		$input.try_read_line()
+	([$default:expr]) => {{
+		print!("(default: {}) ", $default);
+		smart_read::read_string_or_default($default.to_string())
 	}};
-	(= $($input:expr),*) => {{
+	($custom_input:expr) => {{
 		use smart_read::ReadLine;
-		let mut choices = vec!();
-		$(choices.push($input);)*
-		choices.try_read_line()
+		$custom_input.try_read_line(None, None)
+	}};
+	([$default:expr] $custom_input:expr) => {{
+		use smart_read::ReadLine;
+		$custom_input.try_read_line(None, Some($default))
+	}};
+	(= $($choice:expr),*) => {{
+		use smart_read::ReadLine;
+		let choices = &[$($choice,)*];
+		choices.try_read_line(None, None)
+	}};
+	([$default:expr] = $($choice:expr),*) => {{
+		use smart_read::ReadLine;
+		let choices = &[$($choice,)*];
+		choices.try_read_line(None, Some($default))
 	}};
 }
 
@@ -87,28 +105,38 @@ macro_rules! try_prompt {
 		print!("{}", $prompt);
 		smart_read::read_string()
 	}};
-	($prompt:expr; $input:expr) => {{
+	($prompt:expr; [$default:expr]) => {
+		print!("{}(default: {}) ", $prompt, $default);
+		smart_read::read_string_or_default($default.to_string())
+	};
+	($prompt:expr; $custom_input:expr) => {{
 		use smart_read::ReadLine;
-		println!("{}", $prompt);
-		$input.try_read_line()
+		$custom_input.try_read_line(Some($prompt.to_string()), None)
 	}};
-	($prompt:expr; = $($input:expr),*) => {{
+	($prompt:expr; [$default:expr] $custom_input:expr) => {{
 		use smart_read::ReadLine;
-		let mut choices = vec!();
-		$(choices.push($input);)*
-		println!("{}", $prompt);
-		choices.try_read_line()
+		$custom_input.try_read_line(Some($prompt.to_string()), Some($default))
+	}};
+	($prompt:expr; = $($choice:expr),*) => {{
+		use smart_read::ReadLine;
+		let choices = &[$($choice,)*];
+		choices.try_read_line(Some($prompt.to_string()), None)
+	}};
+	($prompt:expr; [$default:expr] = $($choice:expr),*) => {{
+		use smart_read::ReadLine;
+		let choices = &[$($choice,)*];
+		choices.try_read_line(Some($prompt.to_string()), Some($default))
 	}};
 }
 
 
 
-/// This is what powers the whole crate. Anything that implements this can be passed to `read!()` and `try_read!()`
-pub trait ReadLine {
+/// This is what powers the whole crate. Any struct that implements this can be passed to read!(), try_read!(), prompt!(), and try_prompt!()
+pub trait ReadLine: Sized {
 	type Output;
-	fn try_read_line(&self) -> BoxResult<Self::Output>;
-	fn read_line(&self) -> Self::Output {
-		self.try_read_line().unwrap()
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output>;
+	fn read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> Self::Output {
+		self.try_read_line(prompt, default).unwrap()
 	}
 }
 
@@ -127,4 +155,20 @@ pub fn read_string() -> BoxResult<String> {
 	if output.as_bytes().last() == Some(&13) {output.pop();} // pop \r
 	
 	Ok(output)
+}
+
+pub fn read_string_or_default(default: String) -> BoxResult<String> {
+	
+	let mut output = String::new();
+	std::io::stdout().flush()?;
+	std::io::stdin().read_line(&mut output)?;
+	
+	if output.as_bytes().last() == Some(&10) {output.pop();} // pop \n
+	if output.as_bytes().last() == Some(&13) {output.pop();} // pop \r
+	
+	Ok(if output.is_empty() {
+		default
+	} else {
+		output
+	})
 }

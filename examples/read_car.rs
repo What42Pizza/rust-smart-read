@@ -9,7 +9,7 @@ fn main() {
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Car {
 	pub name: String,
 	pub color: String,

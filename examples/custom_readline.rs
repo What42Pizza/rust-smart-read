@@ -1,21 +1,38 @@
 use smart_read::{read, read_string, ReadLine};
 
 fn main() {
-	let input = read!(CustomInput);
+	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
 	println!("You entered: \"{input}\"");
 }
 
 
 
-struct CustomInput;
+struct PasswordInput {
+	pub min_len: usize,
+	pub min_digits: usize,
+}
 
-impl ReadLine for CustomInput {
-	type Output = &'static std::ffi::FromBytesUntilNulError;
-	fn try_read_line(&self) -> smart_read::BoxResult<Self::Output> {
+impl ReadLine for PasswordInput {
+	type Output = String;
+	fn try_read_line(&self, prompt: Option<String>, default: Option<String>) -> smart_read::BoxResult<Self::Output> {
+		assert!(default.is_none());
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits));
 		loop {
-			print!("Enter a string: ");
-			let _ = read_string()?;
-			println!("Input not accepted");
+			
+			print!("{prompt}");
+			let password = read_string()?;
+			
+			if password.len() < 10 {
+				println!("Password must have at least 10 characters");
+				continue;
+			}
+			if password.chars().filter(|c| c.is_digit(10)).count() < 1 {
+				println!("Password must have at least 1 digit");
+				continue;
+			}
+			
+			return Ok(password)
+			
 		}
 	}
 }

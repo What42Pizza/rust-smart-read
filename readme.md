@@ -4,17 +4,28 @@
 
 <br>
 
-If you just want to read a line of text: `read!()`
+### Basic Usage
 
-Or if you want to prompt the user for input: `prompt!("Enter a string: ")`
+```
+let _ = read!(); // read a line of text
 
-Or if you want to receive certain inputs: `read!(= "red", "green", "blue")` or `prompt!("Enter a color: "; = "red", "green", "blue")`
+let _ = prompt!(); // prompt a line of text
 
-Or even take a number within a range: `read!(0. ..= 100.)`
+let _ = read!(["two"]); // read a line of text with a default 
 
-And of course, you can take a Result instead: `try_read!(&["option 1", "option 2"])`
+let _ = read!(= "red", "green", "blue"); // receive specific inputs
+let _ = prompt!("Enter a color: "; = "red", "green", "blue");
+let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line above
 
-And all with clean(?) outputs:
+let _ = read!(0. ..= 100.); // take a number within a range
+
+let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
+```
+
+<br>
+
+### Example stdout
+
 ```
 Enter a number within the range [0.0, 100.0]:
 100.0001
@@ -28,15 +39,17 @@ Enter a number within the range [0.0, 100.0]:
 
 <br>
 
-You can even extend functionality with little effort:
+### Extend Existing Functionality
 
 ```
+use smart_read::read;
+
 fn main() {
 	let input = read!(= Car::new("Red", "Toyota"), Car::new("Silver", "Ram"));
 	println!("You chose: {input}");
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Car {
 	pub name: String,
 	pub color: String,
@@ -60,26 +73,44 @@ impl std::fmt::Display for Car {
 
 <br>
 
-Or, you can even add brand new functionality:
+### Add New Functionality
 
 ```
 use smart_read::{read, read_string, ReadLine};
 
 fn main() {
-	let input = read!(CustomInput);
+	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
 	println!("You entered: \"{input}\"");
 }
 
-struct CustomInput;
+struct PasswordInput {
+	pub min_len: usize,
+	pub min_digits: usize,
+}
 
-impl ReadLine for CustomInput {
-	type Output = &'static std::ffi::FromBytesUntilNulError;
-	fn try_read_line(&self) -> smart_read::BoxResult<Self::Output> {
+impl ReadLine for PasswordInput {
+	type Output = String;
+	fn try_read_line(&self, prompt: Option<String>, default: Option<String>) -> smart_read::BoxResult<Self::Output> {
+		assert!(default.is_none());
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits));
 		loop {
-			print!("Enter a string: ");
-			let _ = read_string()?;
-			println!("Input not accepted");
+			
+			print!("{prompt}");
+			let password = read_string()?;
+			
+			if password.len() < 10 {
+				println!("Password must have at least 10 characters");
+				continue;
+			}
+			if password.chars().filter(|c| c.is_digit(10)).count() < 1 {
+				println!("Password must have at least 1 digit");
+				continue;
+			}
+			
+			return Ok(password)
+			
 		}
 	}
 }
+
 ```
