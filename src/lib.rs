@@ -81,10 +81,15 @@ pub mod boundless;
 
 
 
-use std::{error::Error, io::Write};
+use std::{error::Error, io::{Read, Write}};
 
 /// Just `Result<T, Box<dyn Error>>`, mostly for internal use
 pub type BoxResult<T> = Result<T, Box<dyn Error>>;
+
+pub struct Input<'a> {
+	pub iter: &'a mut dyn Iterator<Item = BoxResult<u8>>,
+	pub needs_std_flush: bool,
+}
 
 
 
@@ -110,31 +115,66 @@ macro_rules! read {
 /// Same as read!(), but returns a result
 #[macro_export]
 macro_rules! try_read {
-	() => {
-		smart_read::read_string()
-	};
-	([$default:expr]) => {{
+	
+	() => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, Input, stdin_as_input, read_string};
+		let mut input = stdin_as_input()?;
+		read_string(&mut Input {iter: &mut input, needs_std_flush: true})
+	}()}};
+	
+	([$default:expr]) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, Input, stdin_as_input, read_string_or_default};
 		print!("(default: {}) ", $default);
-		smart_read::read_string_or_default($default.to_string())
-	}};
-	($custom_input:expr) => {{
-		use smart_read::ReadLine;
-		$custom_input.try_read_line(None, None)
-	}};
-	([$default:expr] $custom_input:expr) => {{
-		use smart_read::ReadLine;
-		$custom_input.try_read_line(None, Some($default))
-	}};
-	(= $($choice:expr),*) => {{
-		use smart_read::ReadLine;
+		let mut input = stdin_as_input()?;
+		read_string_or_default(&mut Input {iter: &mut input, needs_std_flush: true}, $default.to_string())
+	}()}};
+	
+	($custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: None,
+			default: None,
+		};
+		$custom_input.try_read_line(read_data)
+	}()}};
+	
+	([$default:expr] $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: None,
+			default: Some($default),
+		};
+		$custom_input.try_read_line(read_data)
+	}()}};
+	
+	(= $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: None,
+			default: None,
+		};
 		let choices = &[$($choice,)*];
-		choices.try_read_line(None, None)
-	}};
-	([$default:expr] = $($choice:expr),*) => {{
-		use smart_read::ReadLine;
+		choices.try_read_line(read_data)
+	}()}};
+	
+	([$default:expr] = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: None,
+			default: Some($default),
+		};
 		let choices = &[$($choice,)*];
-		choices.try_read_line(None, Some($default))
-	}};
+		choices.try_read_line(read_data)
+	}()}};
+	
 }
 
 
@@ -150,75 +190,122 @@ macro_rules! prompt {
 /// Same as prompt!(), but returns a result
 #[macro_export]
 macro_rules! try_prompt {
-	($prompt:expr) => {{
+	
+	($prompt:expr) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, Input, stdin_as_input, read_string};
 		print!("{}", $prompt);
-		smart_read::read_string()
-	}};
-	($prompt:expr; [$default:expr]) => {
+		let mut input = stdin_as_input()?;
+		read_string(&mut Input {iter: &mut input, needs_std_flush: true})
+	}()}};
+	
+	($prompt:expr; [$default:expr]) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, Input, stdin_as_input, read_string_or_default};
 		print!("{}(default: {}) ", $prompt, $default);
-		smart_read::read_string_or_default($default.to_string())
-	};
-	($prompt:expr; $custom_input:expr) => {{
-		use smart_read::ReadLine;
-		$custom_input.try_read_line(Some($prompt.to_string()), None)
-	}};
-	($prompt:expr; [$default:expr] $custom_input:expr) => {{
-		use smart_read::ReadLine;
-		$custom_input.try_read_line(Some($prompt.to_string()), Some($default))
-	}};
-	($prompt:expr; = $($choice:expr),*) => {{
-		use smart_read::ReadLine;
+		let mut input = stdin_as_input()?;
+		read_string_or_default(&mut Input {iter: &mut input, needs_std_flush: true}, $default.to_string())
+	}()}};
+	
+	($prompt:expr; $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: Some($prompt.to_string()),
+			default: None,
+		};
+		$custom_input.try_read_line(read_data)
+	}()}};
+	
+	($prompt:expr; [$default:expr] $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: Some($prompt.to_string()),
+			default: Some($default),
+		};
+		$custom_input.try_read_line(read_data)
+	}()}};
+	
+	($prompt:expr; = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: Some($prompt.to_string()),
+			default: None,
+		};
 		let choices = &[$($choice,)*];
-		choices.try_read_line(Some($prompt.to_string()), None)
-	}};
-	($prompt:expr; [$default:expr] = $($choice:expr),*) => {{
-		use smart_read::ReadLine;
+		choices.try_read_line(read_data)
+	}()}};
+	
+	($prompt:expr; [$default:expr] = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+		let mut input = stdin_as_input()?;
+		let read_data = ReadData {
+			input: Input {iter: &mut input, needs_std_flush: true},
+			prompt: Some($prompt.to_string()),
+			default: Some($default),
+		};
 		let choices = &[$($choice,)*];
-		choices.try_read_line(Some($prompt.to_string()), Some($default))
-	}};
+		choices.try_read_line(read_data)
+	}()}};
+	
 }
 
 
 
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
-pub trait ReadLine: Sized {
+pub trait ReadLine<'a>: Sized {
 	type Output;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output>;
-	fn read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> Self::Output {
-		self.try_read_line(prompt, default).unwrap()
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output>;
+	fn read_line(&self, read_data: ReadData<'a, Self::Output>) -> Self::Output {
+		self.try_read_line(read_data).unwrap()
 	}
+}
+
+pub struct ReadData<'a, T> {
+	pub input: Input<'a>,
+	pub prompt: Option<String>,
+	pub default: Option<T>,
 }
 
 
 
 
 
-/// small utility function, mostly for internal use
-pub fn read_string() -> BoxResult<String> {
+/// Utility function, mostly for internal use
+pub fn read_string(input: &mut Input) -> BoxResult<String> {
 	
-	let mut output = String::new();
-	std::io::stdout().flush()?;
-	std::io::stdin().read_line(&mut output)?;
+	if input.needs_std_flush {std::io::stdout().flush()?;}
 	
-	if output.as_bytes().last() == Some(&10) {output.pop();} // pop \n
-	if output.as_bytes().last() == Some(&13) {output.pop();} // pop \r
+	let mut output = vec!();
+	while output.last() != Some(&b'\n') {
+		output.push(input.iter.next().unwrap()?);
+	}
+	if output.last() == Some(&10) {output.pop();} // pop \n
+	if output.last() == Some(&13) {output.pop();} // pop \r
+	let output = String::from_utf8(output)?;
 	
 	Ok(output)
 }
 
-/// small utility function, mostly for internal use
-pub fn read_string_or_default(default: String) -> BoxResult<String> {
-	
-	let mut output = String::new();
-	std::io::stdout().flush()?;
-	std::io::stdin().read_line(&mut output)?;
-	
-	if output.as_bytes().last() == Some(&10) {output.pop();} // pop \n
-	if output.as_bytes().last() == Some(&13) {output.pop();} // pop \r
-	
+/// Utility function, mostly for internal use
+pub fn read_string_or_default(input: &mut Input, default: String) -> BoxResult<String> {
+	let output = read_string(input)?;
 	Ok(if output.is_empty() {
 		default
 	} else {
 		output
 	})
+}
+
+/// Utility function, mostly for internal use
+pub fn stdin_as_input() -> BoxResult<impl Iterator<Item = BoxResult<u8>>> {
+	let output = std::io::stdin()
+		.bytes()
+		.map(|b|
+			b.map_err(|e| Box::new(e) as Box<dyn Error>)
+		);
+	Ok(output)
 }

@@ -1,22 +1,22 @@
-use crate::{read_string, ReadLine};
+use crate::{read_string, ReadData, ReadLine};
 
 
 
 /// Allows you to take a bool input
 pub struct BoolInput;
 
-impl ReadLine for BoolInput {
+impl<'a> ReadLine<'a> for BoolInput {
 	type Output = bool;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
-		let mut prompt = prompt.unwrap_or(String::from("Enter a bool: "));
-		if let Some(default) = default.as_ref() {
+	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+		let mut prompt = read_data.prompt.unwrap_or(String::from("Enter a bool: "));
+		if let Some(default) = read_data.default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
 		loop {
 			
 			print!("{prompt}");
-			let input = read_string()?.to_lowercase();
-			match (&*input, default) {
+			let input = read_string(&mut read_data.input)?.to_lowercase();
+			match (&*input, read_data.default) {
 				("", Some(default)) => return Ok(default),
 				("true", _) | ("t", _) => return Ok(true),
 				("false", _) | ("f", _) => return Ok(false),
@@ -32,18 +32,18 @@ impl ReadLine for BoolInput {
 /// Allows you to take a bool input
 pub struct YesNoInput;
 
-impl ReadLine for YesNoInput {
+impl<'a> ReadLine<'a> for YesNoInput {
 	type Output = bool;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
-		let mut prompt = prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
-		if let Some(default) = default.as_ref() {
+	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+		let mut prompt = read_data.prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
+		if let Some(default) = read_data.default.as_ref() {
 			prompt += &format!("(default: {}) ", if *default {"Yes"} else {"No"});
 		}
 		loop {
 			
 			print!("{prompt}");
-			let input = read_string()?.to_lowercase();
-			match (&*input, default) {
+			let input = read_string(&mut read_data.input)?.to_lowercase();
+			match (&*input, read_data.default) {
 				("", Some(default)) => return Ok(default),
 				("yes", _) | ("y", _) => return Ok(true),
 				("no", _) | ("n", _) => return Ok(false),
@@ -58,18 +58,18 @@ impl ReadLine for YesNoInput {
 
 macro_rules! implement_number_input {
 	($type_name:tt, $type_base:ty, $default_prompt:expr) => {
-		impl ReadLine for $type_name {
+		impl<'a> ReadLine<'a> for $type_name {
 			type Output = $type_base;
-			fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
-				let mut prompt = prompt.unwrap_or(String::from($default_prompt));
-				if let Some(default) = default.as_ref() {
+			fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+				let mut prompt = read_data.prompt.unwrap_or(String::from($default_prompt));
+				if let Some(default) = read_data.default.as_ref() {
 					prompt += &format!("(default: {default}) ");
 				}
 				loop {
 					
 					print!("{prompt}");
-					let input_string = read_string()?.to_lowercase();
-					if input_string.is_empty() && let Some(default) = default {
+					let input_string = read_string(&mut read_data.input)?.to_lowercase();
+					if input_string.is_empty() && let Some(default) = read_data.default {
 						return Ok(default);
 					}
 					

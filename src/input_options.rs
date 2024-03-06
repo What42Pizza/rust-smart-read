@@ -1,4 +1,4 @@
-use crate::{read_string, BoxResult, ReadLine};
+use crate::{read_string, BoxResult, ReadData, ReadLine};
 use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
@@ -6,8 +6,8 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
 /// Internal utility function
-pub fn read_input_option<T: Display + Clone>(prompt: Option<&str>, default: Option<usize>, choices: &[T]) -> BoxResult<T> {
-	let prompt = prompt.unwrap_or("Enter one of the following:");
+pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_data: ReadData<'_, T>) -> BoxResult<T> {
+	let prompt = read_data.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
 		.map(ToString::to_string)
@@ -27,7 +27,7 @@ pub fn read_input_option<T: Display + Clone>(prompt: Option<&str>, default: Opti
 			}
 		}
 		
-		let output = read_string()?;
+		let output = read_string(&mut read_data.input)?;
 		if output.is_empty() && let Some(default) = default {
 			return Ok(choices[default].clone());
 		}
@@ -46,62 +46,57 @@ pub fn read_input_option<T: Display + Clone>(prompt: Option<&str>, default: Opti
 
 
 
-impl<T: Display + Clone + PartialEq> ReadLine for &[T] {
+impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for &[T] {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
-		let prompt = prompt.as_ref().map(String::as_str);
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
+			.find(|v| Some(v.1) == read_data.default.as_ref())
 			.map(|v| v.0);
-		read_input_option(prompt, default, self)
+		read_input_option(self, default, read_data)
 	}
 }
 
-impl<T: Display + Clone + PartialEq, const LEN: usize> ReadLine for &[T; LEN] {
+impl<'a, T: Display + Clone + PartialEq, const LEN: usize> ReadLine<'a> for &[T; LEN] {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
-		let prompt = prompt.as_ref().map(String::as_str);
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
+			.find(|v| Some(v.1) == read_data.default.as_ref())
 			.map(|v| v.0);
-		read_input_option(prompt, default, *self)
+		read_input_option(*self, default, read_data)
 	}
 }
 
-impl<T: Display + Clone + PartialEq> ReadLine for Vec<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for Vec<T> {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
-		let prompt = prompt.as_ref().map(String::as_str);
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
+			.find(|v| Some(v.1) == read_data.default.as_ref())
 			.map(|v| v.0);
-		read_input_option(prompt, default, &self)
+		read_input_option(self, default, read_data)
 	}
 }
 
-impl<T: Display + Clone + PartialEq> ReadLine for VecDeque<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for VecDeque<T> {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
-		let prompt = prompt.as_ref().map(String::as_str);
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
+			.find(|v| Some(v.1) == read_data.default.as_ref())
 			.map(|v| v.0);
-		read_input_option(prompt, default, &self.iter().cloned().collect::<Vec<_>>())
+		read_input_option(&self.iter().cloned().collect::<Vec<_>>(), default, read_data)
 	}
 }
 
-impl<T: Display + Clone + PartialEq> ReadLine for LinkedList<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for LinkedList<T> {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
-		let prompt = prompt.as_ref().map(String::as_str);
+	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
+			.find(|v| Some(v.1) == read_data.default.as_ref())
 			.map(|v| v.0);
-		read_input_option(prompt, default, &self.iter().cloned().collect::<Vec<_>>())
+		read_input_option(&self.iter().cloned().collect::<Vec<_>>(), default, read_data)
 	}
 }
