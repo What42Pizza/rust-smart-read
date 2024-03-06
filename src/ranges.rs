@@ -3,13 +3,17 @@ use std::{fmt::Display, ops::{Range, RangeBounds, RangeFrom, RangeInclusive, Ran
 
 
 
+/// Internal utility function
 pub fn read_range<T: Display + FromStr + PartialOrd<T>, R: RangeBounds<T>>(range: &R, prompt: Option<String>, default: Option<T>, format: fn(&R) -> String) -> BoxResult<T> {
-	let prompt = match prompt {
+	let mut prompt = match prompt {
 		Some(v) => v,
-		None => format!("Enter a number within the range {}:", format(&range)),
+		None => format!("Enter a number within the range {}: ", format(&range)),
 	};
+	if let Some(default) = default.as_ref() {
+		prompt += &format!(" (default: {default})");
+	}
 	loop {
-		println!("{prompt}");
+		print!("{prompt}");
 		let output_string = read_string()?;
 		if output_string.is_empty() && let Some(default) = default {
 			return Ok(default);

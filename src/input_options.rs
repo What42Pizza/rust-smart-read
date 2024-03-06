@@ -5,6 +5,7 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
 
+/// Internal utility function
 pub fn read_input_option<T: Display + Clone>(prompt: Option<&str>, default: Option<usize>, choices: &[T]) -> BoxResult<T> {
 	let prompt = prompt.unwrap_or("Enter one of the following:");
 	let choice_strings =
@@ -45,7 +46,7 @@ pub fn read_input_option<T: Display + Clone>(prompt: Option<&str>, default: Opti
 
 
 
-impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for &[T] {
+impl<T: Display + Clone + PartialEq> ReadLine for &[T] {
 	type Output = T;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
 		let prompt = prompt.as_ref().map(String::as_str);
@@ -57,7 +58,7 @@ impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for &[T] {
 	}
 }
 
-impl<T: Display + Clone + std::cmp::PartialEq, const LEN: usize> ReadLine for &[T; LEN] {
+impl<T: Display + Clone + PartialEq, const LEN: usize> ReadLine for &[T; LEN] {
 	type Output = T;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
 		let prompt = prompt.as_ref().map(String::as_str);
@@ -69,7 +70,7 @@ impl<T: Display + Clone + std::cmp::PartialEq, const LEN: usize> ReadLine for &[
 	}
 }
 
-impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for Vec<T> {
+impl<T: Display + Clone + PartialEq> ReadLine for Vec<T> {
 	type Output = T;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
 		let prompt = prompt.as_ref().map(String::as_str);
@@ -81,7 +82,7 @@ impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for Vec<T> {
 	}
 }
 
-impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for VecDeque<T> {
+impl<T: Display + Clone + PartialEq> ReadLine for VecDeque<T> {
 	type Output = T;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
 		let prompt = prompt.as_ref().map(String::as_str);
@@ -93,7 +94,7 @@ impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for VecDeque<T> {
 	}
 }
 
-impl<T: Display + Clone + std::cmp::PartialEq> ReadLine for LinkedList<T> {
+impl<T: Display + Clone + PartialEq> ReadLine for LinkedList<T> {
 	type Output = T;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<T>) -> BoxResult<Self::Output> {
 		let prompt = prompt.as_ref().map(String::as_str);

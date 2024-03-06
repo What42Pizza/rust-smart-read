@@ -19,6 +19,8 @@ let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line a
 
 let _ = read!(0. ..= 100.); // take a number within a range
 
+let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
+
 let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
 ```
 
@@ -44,24 +46,19 @@ Enter a number within the range [0.0, 100.0]:
 ```
 use smart_read::read;
 
-fn main() {
-	let input = read!(= Car::new("Red", "Toyota"), Car::new("Silver", "Ram"));
-	println!("You chose: {input}");
-}
-
 #[derive(Clone, PartialEq)]
 pub struct Car {
 	pub name: String,
 	pub color: String,
 }
 
-impl Car {
-	pub fn new(color: impl Into<String>, name: impl Into<String>) -> Self {
-		Self {
-			name: name.into(),
-			color: color.into(),
-		}
-	}
+fn main() {
+	let input = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	println!("You chose: {input}");
+}
+
+pub fn new_car(color: impl Into<String>, name: impl Into<String>) -> Car {
+	Car {name: name.into(), color: color.into()}
 }
 
 impl std::fmt::Display for Car {

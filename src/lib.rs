@@ -1,5 +1,73 @@
-// started      24/03/05
-// last updated 24/03/06
+//! ## Smart-Read
+//! 
+//! Complex but easy ways to read user input
+//! 
+//! <br>
+//! 
+//! ### Anything that implements `ReadLine` can be used with smart-read's macros, and many implementations are already given
+//! 
+//! <br>
+//! <br>
+//! 
+//! ## Existing functionalities:
+//! 
+//! <br>
+//! 
+//! ### Boundless
+//! 
+//! These allow you to take any `usize`, `bool`, etc. Example: `read!(YesNoInput)`
+//! 
+//! Implemented types:
+//! ```
+//! impl ReadLine for BoolInput
+//! impl ReadLine for YesNoInput
+//! impl ReadLine for CharInput
+//! impl ReadLine for UsizeInput
+//! impl ReadLine for IsizeInput
+//! impl ReadLine for U8Input, U16Input, U32Input, U64Input, U128Input
+//! impl ReadLine for I8Input, I16Input, I32Input, I64Input, I128Input
+//! impl ReadLine for F32Input
+//! impl ReadLine for F64Input
+//! ```
+//! 
+//! <br>
+//! 
+//! ### Input Options
+//! 
+//! These allow you to specify which inputs are allowed. Example: `read!(&["a", "b", "c"])`
+//! 
+//! Special syntax: `read!(= 1, 2, 3)`
+//! 
+//! Implemented types:
+//! ```
+//! impl<T: Display + Clone + PartialEq> ReadLine for &[T]
+//! impl<T: Display + Clone + PartialEq> ReadLine for &[T; _]
+//! impl<T: Display + Clone + PartialEq> ReadLine for Vec<T>
+//! impl<T: Display + Clone + PartialEq> ReadLine for VecDeque<T>
+//! impl<T: Display + Clone + PartialEq> ReadLine for LinkedList<T>
+//! ```
+//! 
+//! <br>
+//! 
+//! ### Ranges
+//! 
+//! These allow you to take a number within a specified range. Example: `read!(1. .. 100.)`, or `read!(10..)`, etc
+//! 
+//! Implemented types:
+//! ```
+//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for Range<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeInclusive<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeTo<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeFrom<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeToInclusive<T>
+//! ```
+//! 
+//! <br>
+//! 
+//! If you have ideas for more functionality, feel free to open an issue
+//! 
+//! <br>
+//! <br>
 
 
 
@@ -9,48 +77,29 @@
 
 pub mod input_options;
 pub mod ranges;
+pub mod boundless;
 
 
 
 use std::{error::Error, io::Write};
 
+/// Just `Result<T, Box<dyn Error>>`, mostly for internal use
 pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 
 
-/// reads a line of text, a number, etc
+/// ## Reads a line of text, a number, etc
 /// 
-/// General syntax:
-/// read!([default_value] ...) // works with prompt, like prompt!("Give input: "; [3])
+/// ## Syntax Options: (every value "struct" must implement ReadLine)
 /// 
-/// 
-/// Existing functionalities:
-/// 
-/// 
-/// Input Options
-/// These allow you to specify which inputs are allowed. Example: read!(&["a", "b", "c"])
-/// Special syntax: read!(= 1, 2, 3)
-/// 
-/// Implemented types:
-/// impl<T: ToString + Clone> ReadLine for ReadData<T, &[T]>
-/// impl<T: ToString + Clone> ReadLine for ReadData<T, &[T; LEN]>
-/// impl<T: ToString + Clone> ReadLine for ReadData<T, Vec<T>>
-/// impl<T: ToString + Clone> ReadLine for ReadData<T, VecDeque<T>>
-/// impl<T: ToString + Clone> ReadLine for ReadData<T, LinkedList<T>>
-/// 
-/// 
-/// Ranges
-/// These allow you to take a number within a specified range. Example: read!(1. .. 100.), or read!(10..), etc
-/// 
-/// Implemented types:
-/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for Range<T>
-/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeInclusive<T>
-/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeTo<T>
-/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeFrom<T>
-/// impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeToInclusive<T>
-/// 
-/// 
-/// If you have ideas for more functionality, feel free to open an issue
+/// ```
+/// read!()
+/// read!([default_value])
+/// read!(struct)
+/// read!([default_value] struct)
+/// read!(= option1, option2, ..)
+/// read!([default_value] = option1, option2, ..)
+/// ```
 #[macro_export]
 macro_rules! read {
 	($($args:tt)*) => {
@@ -58,7 +107,7 @@ macro_rules! read {
 	}
 }
 
-/// same as read!(), but returns a result
+/// Same as read!(), but returns a result
 #[macro_export]
 macro_rules! try_read {
 	() => {
@@ -90,7 +139,7 @@ macro_rules! try_read {
 
 
 
-/// prompts a line of text, a number, etc
+/// Same as read!(), but also gives a prompt
 #[macro_export]
 macro_rules! prompt {
 	($($args:tt)*) => {
@@ -98,7 +147,7 @@ macro_rules! prompt {
 	}
 }
 
-/// same as prompt!(), but returns a result
+/// Same as prompt!(), but returns a result
 #[macro_export]
 macro_rules! try_prompt {
 	($prompt:expr) => {{
@@ -131,7 +180,7 @@ macro_rules! try_prompt {
 
 
 
-/// This is what powers the whole crate. Any struct that implements this can be passed to read!(), try_read!(), prompt!(), and try_prompt!()
+/// This is what powers the whole crate. Any struct that implements this can be used with the macros
 pub trait ReadLine: Sized {
 	type Output;
 	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output>;
@@ -157,6 +206,7 @@ pub fn read_string() -> BoxResult<String> {
 	Ok(output)
 }
 
+/// small utility function, mostly for internal use
 pub fn read_string_or_default(default: String) -> BoxResult<String> {
 	
 	let mut output = String::new();

@@ -2,26 +2,21 @@ use smart_read::read;
 
 
 
-fn main() {
-	let input = read!(= Car::new("Red", "Toyota"), Car::new("Silver", "Ram"));
-	println!("You chose: {input}");
-}
-
-
-
 #[derive(Clone, PartialEq)]
 pub struct Car {
 	pub name: String,
 	pub color: String,
 }
 
-impl Car {
-	pub fn new(color: impl Into<String>, name: impl Into<String>) -> Self {
-		Self {
-			name: name.into(),
-			color: color.into(),
-		}
-	}
+fn main() {
+	let input = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	println!("You chose: {input}");
+}
+
+
+
+pub fn new_car(color: impl Into<String>, name: impl Into<String>) -> Car {
+	Car {name: name.into(), color: color.into()}
 }
 
 impl std::fmt::Display for Car {
