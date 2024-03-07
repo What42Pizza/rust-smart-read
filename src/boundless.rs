@@ -5,9 +5,9 @@ use crate::{read_string, ReadData, ReadLine};
 /// Allows you to take a bool input
 pub struct BoolInput;
 
-impl<'a> ReadLine<'a> for BoolInput {
+impl<'a> ReadLine for BoolInput {
 	type Output = bool;
-	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(&self, mut read_data: ReadData<Self::Output>) -> crate::BoxResult<Self::Output> {
 		let mut prompt = read_data.prompt.unwrap_or(String::from("Enter a bool: "));
 		if let Some(default) = read_data.default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -32,9 +32,9 @@ impl<'a> ReadLine<'a> for BoolInput {
 /// Allows you to take a bool input
 pub struct YesNoInput;
 
-impl<'a> ReadLine<'a> for YesNoInput {
+impl<'a> ReadLine for YesNoInput {
 	type Output = bool;
-	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(&self, mut read_data: ReadData<Self::Output>) -> crate::BoxResult<Self::Output> {
 		let mut prompt = read_data.prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
 		if let Some(default) = read_data.default.as_ref() {
 			prompt += &format!("(default: {}) ", if *default {"Yes"} else {"No"});
@@ -58,9 +58,9 @@ impl<'a> ReadLine<'a> for YesNoInput {
 
 macro_rules! implement_number_input {
 	($type_name:tt, $type_base:ty, $default_prompt:expr) => {
-		impl<'a> ReadLine<'a> for $type_name {
+		impl<'a> ReadLine for $type_name {
 			type Output = $type_base;
-			fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> crate::BoxResult<Self::Output> {
+			fn try_read_line(&self, mut read_data: ReadData<Self::Output>) -> crate::BoxResult<Self::Output> {
 				let mut prompt = read_data.prompt.unwrap_or(String::from($default_prompt));
 				if let Some(default) = read_data.default.as_ref() {
 					prompt += &format!("(default: {default}) ");

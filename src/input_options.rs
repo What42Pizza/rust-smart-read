@@ -6,7 +6,7 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
 /// Internal utility function
-pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_data: ReadData<'_, T>) -> BoxResult<T> {
+pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_data: ReadData<T>) -> BoxResult<T> {
 	let prompt = read_data.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
@@ -46,9 +46,9 @@ pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usiz
 
 
 
-impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for &[T] {
+impl<'a, T: Display + Clone + PartialEq> ReadLine for &[T] {
 	type Output = T;
-	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_data.default.as_ref())
@@ -57,9 +57,9 @@ impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for &[T] {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq, const LEN: usize> ReadLine<'a> for &[T; LEN] {
+impl<'a, T: Display + Clone + PartialEq, const LEN: usize> ReadLine for &[T; LEN] {
 	type Output = T;
-	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_data.default.as_ref())
@@ -68,9 +68,9 @@ impl<'a, T: Display + Clone + PartialEq, const LEN: usize> ReadLine<'a> for &[T;
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for Vec<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine for Vec<T> {
 	type Output = T;
-	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_data.default.as_ref())
@@ -79,9 +79,9 @@ impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for Vec<T> {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for VecDeque<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine for VecDeque<T> {
 	type Output = T;
-	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_data.default.as_ref())
@@ -90,9 +90,9 @@ impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for VecDeque<T> {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> ReadLine<'a> for LinkedList<T> {
+impl<'a, T: Display + Clone + PartialEq> ReadLine for LinkedList<T> {
 	type Output = T;
-	fn try_read_line(&self, read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_data.default.as_ref())
