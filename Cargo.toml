@@ -1,9 +1,9 @@
 [package]
 name = "smart-read"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "MIT"
-description = "complex but easy ways to read user input"
+description = "Complex but easy ways to read user input"
 repository = "https://github.com/What42Pizza/rust-smart-read"
 readme = "readme.md"
 keywords = ["stdin", "io", "read", "input"]

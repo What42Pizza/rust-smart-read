@@ -32,8 +32,15 @@ fn main() {
 	let input = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
 	println!("You entered: \"{input}\"");
 	
+	println!("\n==== `prompt!(\"This input will come from a string\"; \"input is already given\\r\\n\" >>)` ====");
+	let input = prompt!("This input will come from a string\n"; "input is already given\r\n" >>); // take input from any Result<u8> iterator
+	println!("You entered: \"{input}\"");
+	
 	println!("\n==== `prompt!(\"Enter an int: \"; [1] = 1, 2, 3, 4, 5)` ====");
 	let input = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
 	println!("You entered: \"{input}\"");
+	
+	println!();
+	prompt!("read_lines finished, press enter to exit.");
 	
 }

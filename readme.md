@@ -9,7 +9,7 @@
 ```
 let _ = read!(); // read a line of text
 
-let _ = prompt!(); // prompt a line of text
+let _ = prompt!("Enter a string: "); // prompt a line of text
 
 let _ = read!(["two"]); // read a line of text with a default 
 
@@ -20,6 +20,8 @@ let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line a
 let _ = read!(0. ..= 100.); // take a number within a range
 
 let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
+
+let _ = prompt!("This input will come from a string"; "input is already given\r\n" >>); // take input from any Result<u8> iterator
 
 let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
 ```

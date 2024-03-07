@@ -13,6 +13,17 @@
 //! 
 //! <br>
 //! 
+//! #### No Args
+//! 
+//! If you don't pass any args, this is the default functionality
+//! 
+//! Implemented type:
+//! ```
+//! impl ReadLine for ()
+//! ```
+//! 
+//! <br>
+//! 
 //! ### Boundless
 //! 
 //! These allow you to take any `usize`, `bool`, etc. Example: `read!(YesNoInput)`
@@ -71,6 +82,12 @@
 //! 
 //! <br>
 //! 
+//! ### Custom Input
+//! 
+//! `input >>` (must implement crate's `IntoInput`)
+//! 
+//! <br>
+//! 
 //! ### Prompt Message
 //! 
 //! `prompt_value;` (only available with prompt!())
@@ -83,12 +100,12 @@
 //! 
 //! <br>
 //! 
-//! #### Example: &nbsp; `prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5)`
+//! #### Example: &nbsp; `prompt!("Enter a color: "; prev_user_input >> ["red"] = "red", "green", "blue")`
 //! 
 //! <br>
 //! <br>
 //! 
-//! If you have ideas for more functionality, feel free to open an issue
+//! If you have ideas for more functionality (including things that you've found to be useful for yourself), feel free to open an issue
 //! 
 //! <br>
 //! <br>
@@ -99,6 +116,7 @@
 
 
 
+pub mod no_args;
 pub mod input_options;
 pub mod ranges;
 pub mod boundless;
@@ -127,8 +145,7 @@ macro_rules! try_read {
 	($($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
 		use smart_read::{ReadLine, parse_input_arg, stdin_as_input};
 		let args = parse_input_arg!($($args)*);
-		let input = Box::new(stdin_as_input()?);
-		let (read_args, readline_struct) = args.finalize(input);
+		let (read_args, readline_struct) = args.finalize();
 		readline_struct.try_read_line(read_args)
 	}()}};
 	
@@ -148,20 +165,13 @@ macro_rules! prompt {
 #[macro_export]
 macro_rules! try_prompt {
 	
-	($prompt:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{Input, read_string, stdin_as_input};
-		print!("{}", $prompt);
-		let stdin = Box::new(stdin_as_input()?);
-		let mut input = Input {iter: stdin, needs_std_flush: true};
-		read_string(&mut input)
-	}()}};
+	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
 	($prompt:expr; $($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
 		use smart_read::{ReadLine, parse_input_arg, stdin_as_input};
 		let mut args = parse_input_arg!($($args)*);
 		args.set_prompt = Some($prompt.to_string());
-		let stdin = Box::new(stdin_as_input()?);
-		let (read_args, readline_struct) = args.finalize(stdin);
+		let (read_args, readline_struct) = args.finalize();
 		readline_struct.try_read_line(read_args)
 	}()}};
 	
@@ -180,11 +190,11 @@ macro_rules! parse_input_arg {
 		output
 	}};
 	
-	($input:expr => $($args:tt)*) => {{
-		use smart_read::{Input, IterBytes, ReadArgs, parse_default_arg};
-		let input = Input::new(Box::new($input.iter_bytes()));
+	($input:tt >> $($args:tt)*) => {{
+		use smart_read::{Input, IntoInput, ReadArgs, parse_default_arg};
+		//let input = Input::new(Box::new($input.iter_bytes()));
 		smart_read::ReadArgs {
-			set_input: Some(input),
+			set_input: Some($input.into_input()),
 			set_prompt: None,
 			set_default: None,
 			set_readline_struct: None,
@@ -263,10 +273,9 @@ macro_rules! parse_final_args {
 pub trait ReadLine {
 	type Output;
 	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output>;
-	fn read_line(&self, read_data: ReadData<Self::Output>) -> Self::Output {
-		self.try_read_line(read_data).unwrap()
-	}
 }
+
+
 
 /// This contains all possible information about the read / prompt
 pub struct ReadData<Item> {
@@ -276,19 +285,46 @@ pub struct ReadData<Item> {
 }
 
 /// Specifies the source of user input
+/// 
+/// If should_stop is None, it defaults to stopping whenever \n is entered
+/// 
+/// If clean_output is None, it defaults to removing a trailing \n (if found) and a trailing \r (if found)
 pub struct Input {
 	pub iter: Box<dyn Iterator<Item = BoxResult<u8>>>,
 	pub needs_std_flush: bool,
+	pub should_stop: Option<fn(&[u8]) -> bool>,
+	pub clean_output: Option<fn(Vec<u8>) -> Vec<u8>>,
 }
 
 impl Input {
-	pub fn new(iter: Box<dyn Iterator<Item = BoxResult<u8>>>) -> Self {
-		Self {
-			iter,
+	pub fn flush_if_needed(&self) -> BoxResult<()>{
+		if self.needs_std_flush {std::io::stdout().flush()?;}
+		Ok(())
+	}
+}
+
+pub trait IntoInput {
+	fn into_input(self) -> Input;
+}
+
+impl<T: Into<String>> IntoInput for T {
+	fn into_input(self) -> Input {
+		Input {
+			iter: Box::new(self.into().into_bytes().into_iter().map(Ok)),
 			needs_std_flush: false,
+			should_stop: None,
+			clean_output: None,
 		}
 	}
 }
+
+impl IntoInput for Input {
+	fn into_input(self) -> Input {
+		self
+	}
+}
+
+
 
 
 
@@ -317,10 +353,9 @@ impl<Item, Struct: ReadLine> ReadArgs<Item, Struct> {
 		}
 		self
 	}
-	pub fn finalize(self, stdin: Box<dyn Iterator<Item = BoxResult<u8>>>) -> (ReadData<Item>, Struct) {
-		let input = Input {iter: stdin, needs_std_flush: true};
+	pub fn finalize(self) -> (ReadData<Item>, Struct) {
 		let read_data = ReadData {
-			input: self.set_input.unwrap_or(input),
+			input: self.set_input.unwrap_or(stdin_as_input()),
 			prompt: self.set_prompt,
 			default: self.set_default,
 		};
@@ -332,64 +367,43 @@ impl<Item, Struct: ReadLine> ReadArgs<Item, Struct> {
 
 
 
-impl ReadLine for () {
-	type Output = String;
-	fn try_read_line(&self, mut read_data: ReadData<Self::Output>) -> BoxResult<Self::Output> {
-		match (read_data.prompt, &read_data.default) {
-			(Some(prompt), Some(default)) => print!("{prompt}(default: {default}) "),
-			(None, Some(default)) => print!("(default: {default}) "),
-			(Some(prompt), None) => print!("{prompt}"),
-			(None, None) => {},
-		}
-		let output = read_string(&mut read_data.input)?;
-		Ok(if output.is_empty() && let Some(default) = read_data.default {
-			default
-		} else {
-			output
-		})
-	}
-}
-
-
-
-
-
-pub trait IterBytes {
-	fn iter_bytes(&self) -> impl Iterator<Item = BoxResult<u8>>;
-}
-
-impl<T: AsRef<str>> IterBytes for T {
-	fn iter_bytes(&self) -> impl Iterator<Item = BoxResult<u8>> {
-		self.as_ref().bytes().map(Ok)
-	}
-}
-
-
-
-
-
 /// Utility function, mostly for internal use
 pub fn read_string(input: &mut Input) -> BoxResult<String> {
 	
-	if input.needs_std_flush {std::io::stdout().flush()?;}
-	
-	let mut output = vec!();
-	while output.last() != Some(&b'\n') {
-		output.push(input.iter.next().unwrap()?);
+	fn default_should_stop(input: &[u8]) -> bool {input.last() == Some(&10)}
+	let should_stop = input.should_stop.unwrap_or(default_should_stop);
+	fn default_clean_output(mut output: Vec<u8>) -> Vec<u8> {
+		if output.last() == Some(&10) {output.pop();} // pop \n
+		if output.last() == Some(&13) {output.pop();} // pop \r
+		output
 	}
-	if output.last() == Some(&10) {output.pop();} // pop \n
-	if output.last() == Some(&13) {output.pop();} // pop \r
+	let clean_output = input.clean_output.unwrap_or(default_clean_output);
+	
+	input.flush_if_needed()?;
+	let mut output = vec!();
+	loop {
+		let Some(next) = input.iter.next() else {break};
+		output.push(next?);
+		if should_stop(&output) {break}
+	}
+	let output = clean_output(output);
 	let output = String::from_utf8(output)?;
 	
 	Ok(output)
 }
 
 /// Utility function, mostly for internal use
-pub fn stdin_as_input() -> BoxResult<impl Iterator<Item = BoxResult<u8>>> {
+pub fn stdin_as_input() -> Input {
 	let output = std::io::stdin()
 		.bytes()
 		.map(|b|
 			b.map_err(|e| Box::new(e) as Box<dyn Error>)
 		);
-	Ok(output)
+	let output = Input {
+		iter: Box::new(output),
+		needs_std_flush: true,
+		should_stop: None,
+		clean_output: None,
+	};
+	output
 }
