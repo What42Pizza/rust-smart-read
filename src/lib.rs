@@ -63,6 +63,30 @@
 //! ```
 //! 
 //! <br>
+//! <br>
+//! 
+//! ## Extra Functionality:
+//! 
+//! Additional data can be added at the start of `read!()` / `prompt!()`. In order, these additions are:
+//! 
+//! <br>
+//! 
+//! ### Prompt Message
+//! 
+//! `prompt_value;` (only available with prompt!())
+//! 
+//! <br>
+//! 
+//! ### Default Value
+//! 
+//! `[default_value]`
+//! 
+//! <br>
+//! 
+//! #### Example: &nbsp; `prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5)`
+//! 
+//! <br>
+//! <br>
 //! 
 //! If you have ideas for more functionality, feel free to open an issue
 //! 
@@ -86,25 +110,9 @@ use std::{error::Error, io::{Read, Write}};
 /// Just `Result<T, Box<dyn Error>>`, mostly for internal use
 pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
-pub struct Input<'a> {
-	pub iter: &'a mut dyn Iterator<Item = BoxResult<u8>>,
-	pub needs_std_flush: bool,
-}
-
 
 
 /// ## Reads a line of text, a number, etc
-/// 
-/// ## Syntax Options: (every value "struct" must implement ReadLine)
-/// 
-/// ```
-/// read!()
-/// read!([default_value])
-/// read!(struct)
-/// read!([default_value] struct)
-/// read!(= option1, option2, ..)
-/// read!([default_value] = option1, option2, ..)
-/// ```
 #[macro_export]
 macro_rules! read {
 	($($args:tt)*) => {
@@ -116,70 +124,19 @@ macro_rules! read {
 #[macro_export]
 macro_rules! try_read {
 	
-	() => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, Input, stdin_as_input, read_string};
+	($($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, parse_default_arg, stdin_as_input};
+		let args = parse_default_arg!($($args)*);
 		let mut input = stdin_as_input()?;
-		read_string(&mut Input {iter: &mut input, needs_std_flush: true})
-	}()}};
-	
-	([$default:expr]) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, Input, stdin_as_input, read_string_or_default};
-		print!("(default: {}) ", $default);
-		let mut input = stdin_as_input()?;
-		read_string_or_default(&mut Input {iter: &mut input, needs_std_flush: true}, $default.to_string())
-	}()}};
-	
-	($custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: None,
-			default: None,
-		};
-		$custom_input.try_read_line(read_data)
-	}()}};
-	
-	([$default:expr] $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: None,
-			default: Some($default),
-		};
-		$custom_input.try_read_line(read_data)
-	}()}};
-	
-	(= $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: None,
-			default: None,
-		};
-		let choices = &[$($choice,)*];
-		choices.try_read_line(read_data)
-	}()}};
-	
-	([$default:expr] = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: None,
-			default: Some($default),
-		};
-		let choices = &[$($choice,)*];
-		choices.try_read_line(read_data)
+		let (read_args, readline_struct) = args.finalize(&mut input);
+		readline_struct.try_read_line(read_args)
 	}()}};
 	
 }
 
 
 
-/// Same as read!(), but also gives a prompt
+/// Same as read!(), but also prints a prompt
 #[macro_export]
 macro_rules! prompt {
 	($($args:tt)*) => {
@@ -192,66 +149,89 @@ macro_rules! prompt {
 macro_rules! try_prompt {
 	
 	($prompt:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, Input, stdin_as_input, read_string};
-		print!("{}", $prompt);
+		use smart_read::{ReadLine, ReadArgs, stdin_as_input};
+		let mut args = ReadArgs::default();
+		args.set_readline_struct = Some(());
+		args.set_prompt = Some($prompt.to_string());
 		let mut input = stdin_as_input()?;
-		read_string(&mut Input {iter: &mut input, needs_std_flush: true})
+		let (read_args, readline_struct) = args.finalize(&mut input);
+		readline_struct.try_read_line(read_args)
 	}()}};
 	
-	($prompt:expr; [$default:expr]) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, Input, stdin_as_input, read_string_or_default};
-		print!("{}(default: {}) ", $prompt, $default);
-		let mut input = stdin_as_input()?;
-		read_string_or_default(&mut Input {iter: &mut input, needs_std_flush: true}, $default.to_string())
-	}()}};
+	($prompt:expr;) => {smart_read::prompt!($prompt)};
 	
-	($prompt:expr; $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
+	($prompt:expr; $($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
+		use smart_read::{ReadLine, parse_default_arg, stdin_as_input};
+		let mut args = parse_default_arg!($($args)*);
+		args.set_prompt = Some($prompt.to_string());
 		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: Some($prompt.to_string()),
-			default: None,
-		};
-		$custom_input.try_read_line(read_data)
-	}()}};
-	
-	($prompt:expr; [$default:expr] $custom_input:expr) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: Some($prompt.to_string()),
-			default: Some($default),
-		};
-		$custom_input.try_read_line(read_data)
-	}()}};
-	
-	($prompt:expr; = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: Some($prompt.to_string()),
-			default: None,
-		};
-		let choices = &[$($choice,)*];
-		choices.try_read_line(read_data)
-	}()}};
-	
-	($prompt:expr; [$default:expr] = $($choice:expr),*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, ReadData, Input, stdin_as_input};
-		let mut input = stdin_as_input()?;
-		let read_data = ReadData {
-			input: Input {iter: &mut input, needs_std_flush: true},
-			prompt: Some($prompt.to_string()),
-			default: Some($default),
-		};
-		let choices = &[$($choice,)*];
-		choices.try_read_line(read_data)
+		let (read_args, readline_struct) = args.finalize(&mut input);
+		readline_struct.try_read_line(read_args)
 	}()}};
 	
 }
+
+
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! parse_default_arg {
+	
+	() => {{
+		use smart_read::ReadArgs;
+		let mut output = ReadArgs::default();
+		output.set_readline_struct = Some(());
+		output
+	}};
+	
+	([$default:expr] $($args:tt)*) => {{
+		use smart_read::{ReadArgs, parse_final_args};
+		smart_read::ReadArgs {
+			set_input: None,
+			set_prompt: None,
+			set_default: Some($default.into()),
+			set_readline_struct: None,
+		}.add(parse_final_args!($($args)*))
+	}};
+	
+	($($args:tt)*) => {smart_read::parse_final_args!($($args)*)}
+	
+}
+
+
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! parse_final_args {
+	
+	() => {{
+		let mut output = smart_read::ReadArgs::default();
+		output.set_readline_struct = Some(());
+		output
+	}};
+	
+	(= $($choice:expr),*) => {{
+		let choices = vec!($($choice,)*);
+		smart_read::ReadArgs {
+			set_input: None,
+			set_prompt: None,
+			set_default: None,
+			set_readline_struct: Some(choices),
+		}
+	}};
+	
+	($readline_struct:expr) => {{
+		smart_read::ReadArgs {
+			set_input: None,
+			set_prompt: None,
+			set_default: None,
+			set_readline_struct: Some($readline_struct),
+		}
+	}}
+	
+}
+
+
 
 
 
@@ -264,10 +244,77 @@ pub trait ReadLine<'a>: Sized {
 	}
 }
 
-pub struct ReadData<'a, T> {
+/// This contains all possible information about the read / prompt
+pub struct ReadData<'a, Item> {
 	pub input: Input<'a>,
 	pub prompt: Option<String>,
-	pub default: Option<T>,
+	pub default: Option<Item>,
+}
+
+/// Specifies the source of user input
+pub struct Input<'a> {
+	pub iter: &'a mut dyn Iterator<Item = BoxResult<u8>>,
+	pub needs_std_flush: bool,
+}
+
+
+
+#[doc(hidden)]
+#[derive(Default)]
+pub struct ReadArgs<'a, Item, Struct: ReadLine<'a>> {
+	pub set_input: Option<Input<'a>>,
+	pub set_prompt: Option<String>,
+	pub set_default: Option<Item>,
+	pub set_readline_struct: Option<Struct>,
+}
+
+impl<'a, Item, Struct: ReadLine<'a>> ReadArgs<'a, Item, Struct> {
+	pub fn add(mut self, other: ReadArgs<'a, Item, Struct>) -> Self {
+		if other.set_input.is_some() {
+			self.set_input = other.set_input;
+		}
+		if other.set_prompt.is_some() {
+			self.set_prompt = other.set_prompt;
+		}
+		if other.set_default.is_some() {
+			self.set_default = other.set_default;
+		}
+		if other.set_readline_struct.is_some() {
+			self.set_readline_struct = other.set_readline_struct;
+		}
+		self
+	}
+	pub fn finalize(self, stdin: &'a mut impl Iterator<Item = BoxResult<u8>>) -> (ReadData<'a, Item>, Struct) {
+		let input = Input {iter: stdin, needs_std_flush: true};
+		let read_data = ReadData {
+			input: self.set_input.unwrap_or(input),
+			prompt: self.set_prompt,
+			default: self.set_default,
+		};
+		(read_data, self.set_readline_struct.unwrap())
+	}
+}
+
+
+
+
+
+impl<'a> ReadLine<'a> for () {
+	type Output = String;
+	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> BoxResult<Self::Output> {
+		match (read_data.prompt, &read_data.default) {
+			(Some(prompt), Some(default)) => print!("{prompt}(default: {default}) "),
+			(None, Some(default)) => print!("(default: {default}) "),
+			(Some(prompt), None) => print!("{prompt}"),
+			(None, None) => {},
+		}
+		let output = read_string(&mut read_data.input)?;
+		Ok(if output.is_empty() && let Some(default) = read_data.default {
+			default
+		} else {
+			output
+		})
+	}
 }
 
 
@@ -288,16 +335,6 @@ pub fn read_string(input: &mut Input) -> BoxResult<String> {
 	let output = String::from_utf8(output)?;
 	
 	Ok(output)
-}
-
-/// Utility function, mostly for internal use
-pub fn read_string_or_default(input: &mut Input, default: String) -> BoxResult<String> {
-	let output = read_string(input)?;
-	Ok(if output.is_empty() {
-		default
-	} else {
-		output
-	})
 }
 
 /// Utility function, mostly for internal use

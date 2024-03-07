@@ -28,12 +28,12 @@ fn main() {
 	let input = read!(0. ..= 100.); // take a number within a range
 	println!("You entered: \"{input}\"");
 	
-	println!("\n==== `prompt!(\"Enter an int: \"; [1] = 1, 2, 3, 4, 5)` ====");
-	let input = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
-	println!("You entered: \"{input}\"");
-	
 	println!("\n==== `prompt!(\"Confirm input: \"; [true] YesNoInput)` ====");
 	let input = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
+	println!("You entered: \"{input}\"");
+	
+	println!("\n==== `prompt!(\"Enter an int: \"; [1] = 1, 2, 3, 4, 5)` ====");
+	let input = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
 	println!("You entered: \"{input}\"");
 	
 }

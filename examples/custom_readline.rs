@@ -1,10 +1,5 @@
 use smart_read::{read, read_string, ReadData, ReadLine};
 
-fn main() {
-	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
-	println!("You entered: \"{input}\"");
-}
-
 
 
 struct PasswordInput {
@@ -12,11 +7,20 @@ struct PasswordInput {
 	pub min_digits: usize,
 }
 
+fn main() {
+	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
+	println!("You entered: \"{input}\"");
+}
+
+
+
 impl<'a> ReadLine<'a> for PasswordInput {
 	type Output = String;
 	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> smart_read::BoxResult<Self::Output> {
 		assert!(read_data.default.is_none());
-		let prompt = read_data.prompt.unwrap_or_else(|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits));
+		let prompt = read_data.prompt.unwrap_or_else(
+			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
+		);
 		loop {
 			
 			print!("{prompt}");

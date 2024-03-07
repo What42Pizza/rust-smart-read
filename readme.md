@@ -73,27 +73,29 @@ impl std::fmt::Display for Car {
 ### Add New Functionality
 
 ```
-use smart_read::{read, read_string, ReadLine};
-
-fn main() {
-	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
-	println!("You entered: \"{input}\"");
-}
+use smart_read::{read, read_string, ReadData, ReadLine};
 
 struct PasswordInput {
 	pub min_len: usize,
 	pub min_digits: usize,
 }
 
-impl ReadLine for PasswordInput {
+fn main() {
+	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
+	println!("You entered: \"{input}\"");
+}
+
+impl<'a> ReadLine<'a> for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<String>) -> smart_read::BoxResult<Self::Output> {
-		assert!(default.is_none());
-		let prompt = prompt.unwrap_or_else(|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits));
+	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> smart_read::BoxResult<Self::Output> {
+		assert!(read_data.default.is_none());
+		let prompt = read_data.prompt.unwrap_or_else(
+			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
+		);
 		loop {
 			
 			print!("{prompt}");
-			let password = read_string()?;
+			let password = read_string(&mut read_data.input)?;
 			
 			if password.len() < 10 {
 				println!("Password must have at least 10 characters");
@@ -109,5 +111,4 @@ impl ReadLine for PasswordInput {
 		}
 	}
 }
-
 ```
