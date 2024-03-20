@@ -21,7 +21,7 @@ let _ = read!(0. ..= 100.); // take a number within a range
 
 let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
 
-let _ = prompt!("This input will come from a string"; "input is already given\r\n" >>); // take input from any Result<u8> iterator
+let _ = prompt!("This input will come from a string"; "input is already given\r\n" >>); // take input from anything that impls Input
 
 let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
 ```
@@ -46,7 +46,7 @@ Enter a number within the range [0.0, 100.0]:
 ### Extend Existing Functionality
 
 ```
-use smart_read::read;
+use smart_read::prelude::*;
 
 #[derive(Clone, PartialEq)]
 pub struct Car {
@@ -75,7 +75,7 @@ impl std::fmt::Display for Car {
 ### Add New Functionality
 
 ```
-use smart_read::{read, read_string, ReadData, ReadLine};
+use smart_read::*;
 
 struct PasswordInput {
 	pub min_len: usize,
@@ -87,9 +87,9 @@ fn main() {
 	println!("You entered: \"{input}\"");
 }
 
-impl<'a> ReadLine<'a> for PasswordInput {
+impl TryRead for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, mut read_data: ReadData<'a, Self::Output>) -> smart_read::BoxResult<Self::Output> {
+	fn try_read_line(&self, mut read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
 		assert!(read_data.default.is_none());
 		let prompt = read_data.prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)

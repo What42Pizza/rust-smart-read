@@ -4,41 +4,30 @@
 //! 
 //! <br>
 //! 
-//! ### Anything that implements `ReadLine` can be used with smart-read's macros, and many implementations are already given
+//! ### Anything that implements the `TryRead` trait can be used with smart-read's macros, and many implementations are already given
 //! 
 //! <br>
 //! <br>
 //! 
-//! ## Existing functionalities:
+//! ## Types that implement TryRead:
 //! 
 //! <br>
 //! 
-//! #### No Args
+//! ### Basics
 //! 
-//! If you don't pass any args, this is the default functionality
-//! 
-//! Implemented type:
 //! ```
-//! impl ReadLine for ()
-//! ```
-//! 
-//! <br>
-//! 
-//! ### Boundless
-//! 
-//! These allow you to take any `usize`, `bool`, etc. Example: `read!(YesNoInput)`
-//! 
-//! Implemented types:
-//! ```
-//! impl ReadLine for BoolInput
-//! impl ReadLine for YesNoInput
-//! impl ReadLine for CharInput
-//! impl ReadLine for UsizeInput
-//! impl ReadLine for IsizeInput
-//! impl ReadLine for U8Input, U16Input, U32Input, U64Input, U128Input
-//! impl ReadLine for I8Input, I16Input, I32Input, I64Input, I128Input
-//! impl ReadLine for F32Input
-//! impl ReadLine for F64Input
+//! impl TryRead for ()
+//! impl TryRead for NonEmptyInput
+//! impl TryRead for NonWhitespaceInput
+//! impl TryRead for BoolInput
+//! impl TryRead for YesNoInput
+//! impl TryRead for CharInput
+//! impl TryRead for UsizeInput
+//! impl TryRead for IsizeInput
+//! impl TryRead for U8Input, U16Input, U32Input, U64Input, U128Input
+//! impl TryRead for I8Input, I16Input, I32Input, I64Input, I128Input
+//! impl TryRead for F32Input
+//! impl TryRead for F64Input
 //! ```
 //! 
 //! <br>
@@ -51,11 +40,11 @@
 //! 
 //! Implemented types:
 //! ```
-//! impl<T: Display + Clone + PartialEq> ReadLine for &[T]
-//! impl<T: Display + Clone + PartialEq> ReadLine for &[T; _]
-//! impl<T: Display + Clone + PartialEq> ReadLine for Vec<T>
-//! impl<T: Display + Clone + PartialEq> ReadLine for VecDeque<T>
-//! impl<T: Display + Clone + PartialEq> ReadLine for LinkedList<T>
+//! impl<T: Display + Clone + PartialEq> TryRead for &[T]
+//! impl<T: Display + Clone + PartialEq> TryRead for &[T; _]
+//! impl<T: Display + Clone + PartialEq> TryRead for Vec<T>
+//! impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T>
+//! impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T>
 //! ```
 //! 
 //! <br>
@@ -66,11 +55,11 @@
 //! 
 //! Implemented types:
 //! ```
-//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for Range<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeInclusive<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeTo<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeFrom<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> ReadLine for RangeToInclusive<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for Range<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeInclusive<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeTo<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeFrom<T>
+//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeToInclusive<T>
 //! ```
 //! 
 //! <br>
@@ -78,7 +67,7 @@
 //! 
 //! ## Extra Functionality:
 //! 
-//! Additional data can be added at the start of `read!()` / `prompt!()`. In order, these additions are:
+//! In addition to the type of input, data can be added at the start of `read!()` / `prompt!()`. In order, these additions are:
 //! 
 //! <br>
 //! 
@@ -114,19 +103,31 @@
 
 #![feature(let_chains)]
 
-
-
-pub mod no_args;
-pub mod input_options;
-pub mod ranges;
-pub mod boundless;
-
-
-
 use std::{error::Error, io::{Read, Write}};
 
-/// Just `Result<T, Box<dyn Error>>`, mostly for internal use
-pub type BoxResult<T> = Result<T, Box<dyn Error>>;
+
+
+pub mod basics;
+pub mod list_constraints;
+pub mod range_constraints;
+
+pub mod prelude {
+	pub use super::{
+		read,
+		try_read,
+		prompt,
+		try_prompt,
+		basics::*,
+		list_constraints::*,
+		range_constraints::*,
+	};
+}
+
+
+
+
+
+// ================================ Macros ================================ //
 
 
 
@@ -143,7 +144,7 @@ macro_rules! read {
 macro_rules! try_read {
 	
 	($($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, parse_input_arg, stdin_as_input};
+		use smart_read::{TryRead, parse_input_arg, stdin_as_input};
 		let args = parse_input_arg!($($args)*);
 		let (read_args, readline_struct) = args.finalize();
 		readline_struct.try_read_line(read_args)
@@ -168,7 +169,7 @@ macro_rules! try_prompt {
 	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
 	($prompt:expr; $($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{ReadLine, parse_input_arg, stdin_as_input};
+		use smart_read::{TryRead, parse_input_arg, stdin_as_input};
 		let mut args = parse_input_arg!($($args)*);
 		args.set_prompt = Some($prompt.to_string());
 		let (read_args, readline_struct) = args.finalize();
@@ -184,16 +185,16 @@ macro_rules! try_prompt {
 macro_rules! parse_input_arg {
 	
 	() => {{
-		use smart_read::ReadArgs;
-		let mut output = ReadArgs::default();
+		use smart_read::MacroArgs;
+		let mut output = MacroArgs::default();
 		output.set_readline_struct = Some(());
 		output
 	}};
 	
 	($input:tt >> $($args:tt)*) => {{
-		use smart_read::{Input, IntoInput, ReadArgs, parse_default_arg};
+		use smart_read::{Input, IntoInput, MacroArgs, parse_default_arg};
 		//let input = Input::new(Box::new($input.iter_bytes()));
-		smart_read::ReadArgs {
+		smart_read::MacroArgs {
 			set_input: Some($input.into_input()),
 			set_prompt: None,
 			set_default: None,
@@ -212,15 +213,15 @@ macro_rules! parse_input_arg {
 macro_rules! parse_default_arg {
 	
 	() => {{
-		use smart_read::ReadArgs;
-		let mut output = ReadArgs::default();
+		use smart_read::MacroArgs;
+		let mut output = MacroArgs::default();
 		output.set_readline_struct = Some(());
 		output
 	}};
 	
 	([$default:expr] $($args:tt)*) => {{
-		use smart_read::{ReadArgs, parse_final_args};
-		smart_read::ReadArgs {
+		use smart_read::{MacroArgs, parse_final_args};
+		smart_read::MacroArgs {
 			set_input: None,
 			set_prompt: None,
 			set_default: Some($default.into()),
@@ -239,14 +240,14 @@ macro_rules! parse_default_arg {
 macro_rules! parse_final_args {
 	
 	() => {{
-		let mut output = smart_read::ReadArgs::default();
+		let mut output = smart_read::MacroArgs::default();
 		output.set_readline_struct = Some(());
 		output
 	}};
 	
 	(= $($choice:expr),*) => {{
 		let choices = vec!($($choice,)*);
-		smart_read::ReadArgs {
+		smart_read::MacroArgs {
 			set_input: None,
 			set_prompt: None,
 			set_default: None,
@@ -255,7 +256,7 @@ macro_rules! parse_final_args {
 	}};
 	
 	($readline_struct:expr) => {{
-		smart_read::ReadArgs {
+		smart_read::MacroArgs {
 			set_input: None,
 			set_prompt: None,
 			set_default: None,
@@ -269,26 +270,37 @@ macro_rules! parse_final_args {
 
 
 
+// ================================ TYPES ================================ //
+
+
+
+/// Just `Result<T, Box<dyn Error>>`, mostly for internal use
+pub type BoxResult<T> = Result<T, Box<dyn Error>>;
+
+
+
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
-pub trait ReadLine {
+pub trait TryRead {
 	type Output;
-	fn try_read_line(&self, read_data: ReadData<Self::Output>) -> BoxResult<Self::Output>;
+	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> BoxResult<Self::Output>;
 }
 
 
 
 /// This contains all possible information about the read / prompt
-pub struct ReadData<Item> {
+pub struct TryReadArgs<Output> {
 	pub input: Input,
 	pub prompt: Option<String>,
-	pub default: Option<Item>,
+	pub default: Option<Output>,
 }
+
+
 
 /// Specifies the source of user input
 /// 
-/// If should_stop is None, it defaults to stopping whenever \n is entered
+/// If should_stop is None, it defaults to stopping once \n is read
 /// 
-/// If clean_output is None, it defaults to removing a trailing \n (if found) and a trailing \r (if found)
+/// If clean_output is None, it defaults to removing a trailing \n (if found) then a trailing \r (if found)
 pub struct Input {
 	pub iter: Box<dyn Iterator<Item = BoxResult<u8>>>,
 	pub needs_std_flush: bool,
@@ -297,12 +309,24 @@ pub struct Input {
 }
 
 impl Input {
-	pub fn flush_if_needed(&self) -> BoxResult<()>{
+	pub fn flush_std_if_needed(&self) -> BoxResult<()>{
 		if self.needs_std_flush {std::io::stdout().flush()?;}
 		Ok(())
 	}
 }
 
+
+
+/// Allows a type to be used as input. Example:
+/// 
+/// ```
+/// pub struct TerminalInput;
+/// impl IntoInput for TerminalInput {
+/// 	...
+/// }
+/// 
+/// read!(TerminalInput >>);
+/// ```
 pub trait IntoInput {
 	fn into_input(self) -> Input;
 }
@@ -326,19 +350,17 @@ impl IntoInput for Input {
 
 
 
-
-
 #[doc(hidden)]
 #[derive(Default)]
-pub struct ReadArgs<Item, Struct: ReadLine> {
+pub struct MacroArgs<Output, Struct: TryRead> {
 	pub set_input: Option<Input>,
 	pub set_prompt: Option<String>,
-	pub set_default: Option<Item>,
+	pub set_default: Option<Output>,
 	pub set_readline_struct: Option<Struct>,
 }
 
-impl<Item, Struct: ReadLine> ReadArgs<Item, Struct> {
-	pub fn extend(mut self, other: ReadArgs<Item, Struct>) -> Self {
+impl<Output, Struct: TryRead> MacroArgs<Output, Struct> {
+	pub fn extend(mut self, other: MacroArgs<Output, Struct>) -> Self {
 		if other.set_input.is_some() {
 			self.set_input = other.set_input;
 		}
@@ -353,9 +375,12 @@ impl<Item, Struct: ReadLine> ReadArgs<Item, Struct> {
 		}
 		self
 	}
-	pub fn finalize(self) -> (ReadData<Item>, Struct) {
-		let read_data = ReadData {
-			input: self.set_input.unwrap_or(stdin_as_input()),
+	pub fn finalize(self) -> (TryReadArgs<Output>, Struct) {
+		let read_data = TryReadArgs {
+			input: match self.set_input {
+				Some(v) => v,
+				None => stdin_as_input(),
+			},
 			prompt: self.set_prompt,
 			default: self.set_default,
 		};
@@ -364,6 +389,10 @@ impl<Item, Struct: ReadLine> ReadArgs<Item, Struct> {
 }
 
 
+
+
+
+// ================================ FUNCTIONS ================================ //
 
 
 
@@ -379,7 +408,7 @@ pub fn read_string(input: &mut Input) -> BoxResult<String> {
 	}
 	let clean_output = input.clean_output.unwrap_or(default_clean_output);
 	
-	input.flush_if_needed()?;
+	input.flush_std_if_needed()?;
 	let mut output = vec!();
 	loop {
 		let Some(next) = input.iter.next() else {break};
@@ -391,6 +420,8 @@ pub fn read_string(input: &mut Input) -> BoxResult<String> {
 	
 	Ok(output)
 }
+
+
 
 /// Utility function, mostly for internal use
 pub fn stdin_as_input() -> Input {

@@ -1,4 +1,4 @@
-use smart_read::{boundless::YesNoInput, prompt, read};
+use smart_read::prelude::*;
 
 fn main() {
 	

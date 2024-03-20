@@ -1,4 +1,4 @@
-use smart_read::read;
+use smart_read::prelude::*;
 
 fn main() {
 	
