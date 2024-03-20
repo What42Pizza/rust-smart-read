@@ -6,7 +6,7 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
 /// Internal utility function
-pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_args: TryReadArgs<T>) -> BoxResult<T> {
+pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_args: TryReadArgs<T>) -> BoxResult<(usize, T)> {
 	let prompt = read_args.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
@@ -29,12 +29,12 @@ pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usiz
 		
 		let output = read_string(&mut read_args.input)?;
 		if output.is_empty() && let Some(default) = default {
-			return Ok(choices[default].clone());
+			return Ok((default, choices[default].clone()));
 		}
 		
 		for (i, choice) in choice_strings.iter().enumerate() {
 			if choice.eq_ignore_ascii_case(&output) {
-				return Ok(choices[i].clone());
+				return Ok((i, choices[i].clone()));
 			}
 		}
 		
@@ -42,11 +42,16 @@ pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usiz
 	}
 }
 
+/// Internal utility function
+pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, read_args: TryReadArgs<T>) -> BoxResult<T> {
+	read_input_option_enumerated(choices, default, read_args).map(|(_index, output)| output)
+}
 
 
 
 
-impl<'a, T: Display + Clone + PartialEq> TryRead for &[T] {
+
+impl<T: Display + Clone + PartialEq> TryRead for &[T] {
 	type Output = T;
 	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
@@ -57,18 +62,19 @@ impl<'a, T: Display + Clone + PartialEq> TryRead for &[T] {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq, const LEN: usize> TryRead for &[T; LEN] {
+impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for &[T; LEN] {
 	type Output = T;
 	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == read_args.default.as_ref())
 			.map(|v| v.0);
+		#[allow(clippy::explicit_auto_deref)] // false positive
 		read_input_option(*self, default, read_args)
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> TryRead for Vec<T> {
+impl<T: Display + Clone + PartialEq> TryRead for Vec<T> {
 	type Output = T;
 	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
@@ -79,7 +85,7 @@ impl<'a, T: Display + Clone + PartialEq> TryRead for Vec<T> {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> TryRead for VecDeque<T> {
+impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T> {
 	type Output = T;
 	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
@@ -90,7 +96,7 @@ impl<'a, T: Display + Clone + PartialEq> TryRead for VecDeque<T> {
 	}
 }
 
-impl<'a, T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
+impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
 	type Output = T;
 	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
 		let default =
@@ -98,5 +104,97 @@ impl<'a, T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
 			.find(|v| Some(v.1) == read_args.default.as_ref())
 			.map(|v| v.0);
 		read_input_option(&self.iter().cloned().collect::<Vec<_>>(), default, read_args)
+	}
+}
+
+
+
+/// Returns the index of the chosen item along with the item
+pub struct EnumerateInput<T: TryRead> (pub T);
+
+impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {
+	type Output = (usize, T);
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let default_index = if let Some((index, _item)) = &read_args.default {
+			Some(*index)
+		} else {
+			None
+		};
+		let read_args = TryReadArgs {
+			input: read_args.input,
+			prompt: read_args.prompt,
+			default: read_args.default.map(|(_index, item)| item),
+		};
+		read_input_option_enumerated(self.0, default_index, read_args)
+	}
+}
+
+impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for EnumerateInput<&[T; LEN]> {
+	type Output = (usize, T);
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let default_index = if let Some((index, _item)) = &read_args.default {
+			Some(*index)
+		} else {
+			None
+		};
+		let read_args = TryReadArgs {
+			input: read_args.input,
+			prompt: read_args.prompt,
+			default: read_args.default.map(|(_index, item)| item),
+		};
+		read_input_option_enumerated(self.0, default_index, read_args)
+	}
+}
+
+impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>> {
+	type Output = (usize, T);
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let default_index = if let Some((index, _item)) = &read_args.default {
+			Some(*index)
+		} else {
+			None
+		};
+		let read_args = TryReadArgs {
+			input: read_args.input,
+			prompt: read_args.prompt,
+			default: read_args.default.map(|(_index, item)| item),
+		};
+		read_input_option_enumerated(&self.0, default_index, read_args)
+	}
+}
+
+impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>> {
+	type Output = (usize, T);
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let default_index = if let Some((index, _item)) = &read_args.default {
+			Some(*index)
+		} else {
+			None
+		};
+		let read_args = TryReadArgs {
+			input: read_args.input,
+			prompt: read_args.prompt,
+			default: read_args.default.map(|(_index, item)| item),
+		};
+		let slice = self.0.iter().cloned().collect::<Vec<_>>();
+		read_input_option_enumerated(&slice, default_index, read_args)
+	}
+}
+
+impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>> {
+	type Output = (usize, T);
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let default_index = if let Some((index, _item)) = &read_args.default {
+			Some(*index)
+		} else {
+			None
+		};
+		let read_args = TryReadArgs {
+			input: read_args.input,
+			prompt: read_args.prompt,
+			default: read_args.default.map(|(_index, item)| item),
+		};
+		let slice = self.0.iter().cloned().collect::<Vec<_>>();
+		read_input_option_enumerated(&slice, default_index, read_args)
 	}
 }

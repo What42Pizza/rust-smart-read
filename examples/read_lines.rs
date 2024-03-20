@@ -24,6 +24,12 @@ fn main() {
 	let input = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line 2 above
 	println!("You entered: \"{input}\"");
 	
+	println!("\n==== `prompt!(\"Which color do you want to remove?\"; EnumerateInput (&*colors));` ====");
+	let mut colors = vec!("red", "green", "blue");
+	let (index, item) = prompt!("Which color do you want to remove?"; EnumerateInput (&*colors)); // get index of chosen option
+	colors.remove(index);
+	println!("You entered: ({index}, \"{item}\")");
+	
 	println!("\n==== `read!(0. ..= 100.)` ====");
 	let input = read!(0. ..= 100.); // take a number within a range
 	println!("You entered: \"{input}\"");

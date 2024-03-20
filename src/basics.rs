@@ -22,6 +22,7 @@ impl TryRead for () {
 
 
 
+/// Takes an input that isn't empty
 pub struct NonEmptyInput;
 
 impl TryRead for NonEmptyInput {
@@ -35,7 +36,7 @@ impl TryRead for NonEmptyInput {
 			
 			print!("{prompt}");
 			let input = read_string(&mut read_args.input)?.to_lowercase();
-			if input.is_empty() {println!("Invalid input."); continue;}
+			if input.is_empty() {println!("Invalid input, must not be empty."); continue;}
 			return BoxResult::Ok(input);
 			
 		}
@@ -44,6 +45,7 @@ impl TryRead for NonEmptyInput {
 
 
 
+/// Takes an input that contains non-whitespace chars
 pub struct NonWhitespaceInput;
 
 impl TryRead for NonWhitespaceInput {
@@ -57,8 +59,31 @@ impl TryRead for NonWhitespaceInput {
 			
 			print!("{prompt}");
 			let input = read_string(&mut read_args.input)?.to_lowercase();
-			if input.trim().is_empty() {println!("Invalid input."); continue;}
+			if input.trim().is_empty() {println!("Invalid input, must contain non-whitespace characters."); continue;}
 			return BoxResult::Ok(input);
+			
+		}
+	}
+}
+
+
+
+/// Allows you to keep reading until condition is met
+impl<T: Fn(&str) -> Result<(), String>> TryRead for T {
+	type Output = String;
+	fn try_read_line(&self, mut read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+		let mut prompt = read_args.prompt.unwrap_or_default();
+		if let Some(default) = read_args.default.as_ref() {
+			prompt += &format!("(default: {default}) ");
+		}
+		loop {
+			
+			print!("{prompt}");
+			let input = read_string(&mut read_args.input)?.to_lowercase();
+			match self(&input) {
+				Ok(_) => return Ok(input),
+				Err(error_message) => println!("{error_message}"),
+			}
 			
 		}
 	}

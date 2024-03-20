@@ -19,6 +19,7 @@
 //! impl TryRead for ()
 //! impl TryRead for NonEmptyInput
 //! impl TryRead for NonWhitespaceInput
+//! impl TryRead for Fn(&str) -> Result<(), String>
 //! impl TryRead for BoolInput
 //! impl TryRead for YesNoInput
 //! impl TryRead for CharInput
@@ -32,9 +33,11 @@
 //! 
 //! <br>
 //! 
-//! ### Input Options
+//! ### List Constraints
 //! 
 //! These allow you to specify which inputs are allowed. Example: `read!(&["a", "b", "c"])`
+//! 
+//! If the choices are wrapped in EnumerateInput, it returns the index of the chosen option
 //! 
 //! Special syntax: `read!(= 1, 2, 3)`
 //! 
@@ -45,11 +48,16 @@
 //! impl<T: Display + Clone + PartialEq> TryRead for Vec<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T>
+//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]>
+//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T; _]>
+//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>>
+//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>>
+//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>>
 //! ```
 //! 
 //! <br>
 //! 
-//! ### Ranges
+//! ### Range Constraints
 //! 
 //! These allow you to take a number within a specified range. Example: `read!(1. .. 100.)`, or `read!(10..)`, etc
 //! 
@@ -71,15 +79,15 @@
 //! 
 //! <br>
 //! 
-//! ### Custom Input
-//! 
-//! `input >>` (must implement crate's `IntoInput`)
-//! 
-//! <br>
-//! 
 //! ### Prompt Message
 //! 
 //! `prompt_value;` (only available with prompt!())
+//! 
+//! <br>
+//! 
+//! ### Custom Input
+//! 
+//! `input >>` (must implement crate's `IntoInput`)
 //! 
 //! <br>
 //! 
@@ -102,15 +110,21 @@
 
 
 #![feature(let_chains)]
+#![allow(clippy::tabs_in_doc_comments)]
+#![warn(clippy::todo, clippy::unwrap_used)]
 
 use std::{error::Error, io::{Read, Write}};
 
 
 
+/// Contains implementations for `()`, `UsizeInput`, `NonEmptyInput`, etc
 pub mod basics;
+/// Contains implementations for `Vec<T>`, `read!(= a, b, c)`, etc
 pub mod list_constraints;
+/// Contains implementations for `Range<T>`, `RangeFrom<T>`, etc
 pub mod range_constraints;
 
+/// Easy way to use existing functionality. If you want to extend functionality instead, you can do `use smart_read::*;`
 pub mod prelude {
 	pub use super::{
 		read,
@@ -193,7 +207,6 @@ macro_rules! parse_input_arg {
 	
 	($input:tt >> $($args:tt)*) => {{
 		use smart_read::{Input, IntoInput, MacroArgs, parse_default_arg};
-		//let input = Input::new(Box::new($input.iter_bytes()));
 		smart_read::MacroArgs {
 			set_input: Some($input.into_input()),
 			set_prompt: None,
@@ -282,7 +295,7 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
 pub trait TryRead {
 	type Output;
-	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> BoxResult<Self::Output>;
+	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output>;
 }
 
 
@@ -309,6 +322,7 @@ pub struct Input {
 }
 
 impl Input {
+	/// Needs to be called to prevent prints before the read appearing after the read
 	pub fn flush_std_if_needed(&self) -> BoxResult<()>{
 		if self.needs_std_flush {std::io::stdout().flush()?;}
 		Ok(())
@@ -339,12 +353,6 @@ impl<T: Into<String>> IntoInput for T {
 			should_stop: None,
 			clean_output: None,
 		}
-	}
-}
-
-impl IntoInput for Input {
-	fn into_input(self) -> Input {
-		self
 	}
 }
 
@@ -384,7 +392,7 @@ impl<Output, Struct: TryRead> MacroArgs<Output, Struct> {
 			prompt: self.set_prompt,
 			default: self.set_default,
 		};
-		(read_data, self.set_readline_struct.unwrap())
+		(read_data, self.set_readline_struct.unwrap_or_else(|| panic!("Internal macro error, MacroArgs.set_readline_struct is None")))
 	}
 }
 
@@ -430,11 +438,17 @@ pub fn stdin_as_input() -> Input {
 		.map(|b|
 			b.map_err(|e| Box::new(e) as Box<dyn Error>)
 		);
-	let output = Input {
+	Input {
 		iter: Box::new(output),
 		needs_std_flush: true,
 		should_stop: None,
 		clean_output: None,
-	};
-	output
+	}
+}
+
+
+
+/// Tiny utility function, clears the terminal output
+pub fn clear_term() {
+	print!("{esc}c", esc = 27 as char);
 }

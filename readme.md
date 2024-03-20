@@ -17,6 +17,10 @@ let _ = read!(= "red", "green", "blue"); // receive specific inputs
 let _ = prompt!("Enter a color: "; = "red", "green", "blue");
 let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line above
 
+let mut colors = vec!("red", "green", "blue");
+let (index, _item) = prompt!("Which color do you want to remove?"; EnumerateInput(&*colors)); // get index of chosen option
+colors.remove(index);
+
 let _ = read!(0. ..= 100.); // take a number within a range
 
 let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
