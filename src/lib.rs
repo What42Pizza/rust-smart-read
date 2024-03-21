@@ -229,7 +229,7 @@ macro_rules! parse_default_arg {
 	
 	([$default:expr] $($args:tt)*) => {{
 		let stage_1 = smart_read::parse_final_args!($($args)*);
-		smart_read::MacroArgsStage2::new(stage_1, Some($default))
+		smart_read::MacroArgsStage2::new(stage_1, Some($default.into()))
 	}};
 	
 	($($args:tt)*) => {{
