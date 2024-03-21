@@ -7,6 +7,7 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 /// Internal utility function
 pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_args: TryReadArgs<T>) -> BoxResult<(usize, T)> {
+	if choices.len() == 0 {panic!("Cannot read input because there are no choices. (empty list constraint)")}
 	let prompt = read_args.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
@@ -109,7 +110,7 @@ impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
 
 
 
-/// Returns the index of the chosen item along with the item
+/// Returns the index of the chosen item along with the item. Remember to NOT use this if, for example, you filter the choices before feeding them to smart-read
 pub struct EnumerateInput<T: TryRead> (pub T);
 
 impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {

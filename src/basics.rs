@@ -35,7 +35,7 @@ impl TryRead for NonEmptyInput {
 		loop {
 			
 			print!("{prompt}");
-			let input = read_string(&mut read_args.input)?.to_lowercase();
+			let input = read_string(&mut read_args.input)?;
 			if input.is_empty() {println!("Invalid input, must not be empty."); continue;}
 			return BoxResult::Ok(input);
 			
@@ -58,7 +58,7 @@ impl TryRead for NonWhitespaceInput {
 		loop {
 			
 			print!("{prompt}");
-			let input = read_string(&mut read_args.input)?.to_lowercase();
+			let input = read_string(&mut read_args.input)?;
 			if input.trim().is_empty() {println!("Invalid input, must contain non-whitespace characters."); continue;}
 			return BoxResult::Ok(input);
 			
@@ -79,7 +79,7 @@ impl<T: Fn(&str) -> Result<(), String>> TryRead for T {
 		loop {
 			
 			print!("{prompt}");
-			let input = read_string(&mut read_args.input)?.to_lowercase();
+			let input = read_string(&mut read_args.input)?;
 			match self(&input) {
 				Ok(_) => return Ok(input),
 				Err(error_message) => println!("{error_message}"),
@@ -157,7 +157,7 @@ macro_rules! implement_number_input {
 				loop {
 					
 					print!("{prompt}");
-					let input_string = read_string(&mut read_args.input)?.to_lowercase();
+					let input_string = read_string(&mut read_args.input)?;
 					if input_string.is_empty() && let Some(default) = read_args.default {
 						return Ok(default);
 					}
