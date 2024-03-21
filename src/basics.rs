@@ -68,29 +68,6 @@ impl TryRead for NonWhitespaceInput {
 
 
 
-/// Allows you to keep reading until condition is met
-impl<T: Fn(&str) -> Result<(), String>> TryRead for T {
-	type Output = String;
-	fn try_read_line(&self, mut read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or_default();
-		if let Some(default) = read_args.default.as_ref() {
-			prompt += &format!("(default: {default}) ");
-		}
-		loop {
-			
-			print!("{prompt}");
-			let input = read_string(&mut read_args.input)?;
-			match self(&input) {
-				Ok(_) => return Ok(input),
-				Err(error_message) => println!("{error_message}"),
-			}
-			
-		}
-	}
-}
-
-
-
 /// Allows you to take a bool input
 pub struct BoolInput;
 
@@ -233,4 +210,3 @@ implement_number_input!(F32Input, f32, "Enter a number: ");
 /// Allows you take take an f64 input
 pub struct F64Input;
 implement_number_input!(F64Input, f64, "Enter a number: ");
-

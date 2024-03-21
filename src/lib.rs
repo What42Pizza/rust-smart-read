@@ -19,7 +19,6 @@
 //! impl TryRead for ()
 //! impl TryRead for NonEmptyInput
 //! impl TryRead for NonWhitespaceInput
-//! impl TryRead for Fn(&str) -> Result<(), String>
 //! impl TryRead for BoolInput
 //! impl TryRead for YesNoInput
 //! impl TryRead for CharInput
@@ -33,11 +32,20 @@
 //! 
 //! <br>
 //! 
+//! ### One-Time Logic
+//! 
+//! ```
+//! impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F>
+//! impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<O, F>
+//! ```
+//! 
+//! <br>
+//! 
 //! ### List Constraints
 //! 
 //! These allow you to specify which inputs are allowed. Example: `read!(&["a", "b", "c"])`
 //! 
-//! If the choices are wrapped in EnumerateInput, it returns the index of the chosen option
+//! If the choices are wrapped in EnumerateInput, it also returns the index of the chosen option
 //! 
 //! Special syntax: `read!(= 1, 2, 3)`
 //! 
@@ -59,7 +67,7 @@
 //! 
 //! ### Range Constraints
 //! 
-//! These allow you to take a number within a specified range. Example: `read!(1. .. 100.)`, or `read!(10..)`, etc
+//! These allow you to take a number within a specified range. Example: `read!(1. .. 100.)`, `read!(10..)`, etc
 //! 
 //! Implemented types:
 //! ```
@@ -119,6 +127,8 @@ use std::{error::Error, io::{Read, Write}};
 
 /// Contains implementations for `()`, `UsizeInput`, `NonEmptyInput`, etc
 pub mod basics;
+/// Contains implementations for `SimpleValidate` and `TransformValidate`
+pub mod one_time_logic;
 /// Contains implementations for `Vec<T>`, `read!(= a, b, c)`, etc
 pub mod list_constraints;
 /// Contains implementations for `Range<T>`, `RangeFrom<T>`, etc
@@ -132,6 +142,7 @@ pub mod prelude {
 		prompt,
 		try_prompt,
 		basics::*,
+		one_time_logic::*,
 		list_constraints::*,
 		range_constraints::*,
 	};
@@ -448,7 +459,7 @@ pub fn stdin_as_input() -> Input {
 
 
 
-/// Tiny utility function, clears the terminal output
+/// Tiny utility function, clears the terminal output, but you should probably use the [ClearScreen](https://crates.io/crates/clearscreen) crate instead
 pub fn clear_term() {
 	print!("{esc}c", esc = 27 as char);
 }

@@ -25,6 +25,13 @@ let _ = read!(0. ..= 100.); // take a number within a range
 
 let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
 
+// one-time custom logic
+let _ = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<usize, String> { // explicit types here are optional, only added for demonstration
+	let Ok(x) = x.parse::<usize>() else {return Err(String::from("Could not parse input."));};
+	if x % 2 != 0 {return Err(String::from("Input is not even."));}
+	Ok(x)
+}));
+
 let _ = prompt!("This input will come from a string"; "input is already given\r\n" >>); // take input from anything that impls Input
 
 let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
