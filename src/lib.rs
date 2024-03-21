@@ -169,10 +169,10 @@ macro_rules! read {
 macro_rules! try_read {
 	
 	($($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{TryRead, parse_input_arg, stdin_as_input};
-		let args = parse_input_arg!($($args)*);
-		let (read_args, readline_struct) = args.finalize();
-		readline_struct.try_read_line(read_args)
+		use smart_read::TryRead;
+		let stage_3 = smart_read::parse_input_arg!($($args)*);
+		let (tryread_struct, args) = stage_3.finalize(None);
+		tryread_struct.try_read_line(args)
 	}()}};
 	
 }
@@ -194,11 +194,10 @@ macro_rules! try_prompt {
 	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
 	($prompt:expr; $($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::{TryRead, parse_input_arg, stdin_as_input};
-		let mut args = parse_input_arg!($($args)*);
-		args.set_prompt = Some($prompt.to_string());
-		let (read_args, readline_struct) = args.finalize();
-		readline_struct.try_read_line(read_args)
+		use smart_read::TryRead;
+		let stage_3 = smart_read::parse_input_arg!($($args)*);
+		let (tryread_struct, args) = stage_3.finalize(Some($prompt.to_string()));
+		tryread_struct.try_read_line(args)
 	}()}};
 	
 }
@@ -209,24 +208,16 @@ macro_rules! try_prompt {
 #[doc(hidden)]
 macro_rules! parse_input_arg {
 	
-	() => {{
-		use smart_read::MacroArgs;
-		let mut output = MacroArgs::default();
-		output.set_readline_struct = Some(());
-		output
-	}};
-	
 	($input:tt >> $($args:tt)*) => {{
-		use smart_read::{Input, IntoInput, MacroArgs, parse_default_arg};
-		smart_read::MacroArgs {
-			set_input: Some($input.into_input()),
-			set_prompt: None,
-			set_default: None,
-			set_readline_struct: None,
-		}.extend(parse_default_arg!($($args)*))
+		use smart_read::IntoInput;
+		let stage_2 = smart_read::parse_default_arg!($($args)*);
+		smart_read::MacroArgsStage3::new(stage_2, $input.into_input())
 	}};
 	
-	($($args:tt)*) => {smart_read::parse_default_arg!($($args)*)}
+	($($args:tt)*) => {{
+		let stage_2 = smart_read::parse_default_arg!($($args)*);
+		smart_read::MacroArgsStage3::new(stage_2, smart_read::stdin_as_input())
+	}};
 	
 }
 
@@ -236,24 +227,15 @@ macro_rules! parse_input_arg {
 #[doc(hidden)]
 macro_rules! parse_default_arg {
 	
-	() => {{
-		use smart_read::MacroArgs;
-		let mut output = MacroArgs::default();
-		output.set_readline_struct = Some(());
-		output
-	}};
-	
 	([$default:expr] $($args:tt)*) => {{
-		use smart_read::{MacroArgs, parse_final_args};
-		smart_read::MacroArgs {
-			set_input: None,
-			set_prompt: None,
-			set_default: Some($default.into()),
-			set_readline_struct: None,
-		}.extend(parse_final_args!($($args)*))
+		let stage_1 = smart_read::parse_final_args!($($args)*);
+		smart_read::MacroArgsStage2::new(stage_1, Some($default))
 	}};
 	
-	($($args:tt)*) => {smart_read::parse_final_args!($($args)*)}
+	($($args:tt)*) => {{
+		let stage_1 = smart_read::parse_final_args!($($args)*);
+		smart_read::MacroArgsStage2::new(stage_1, None)
+	}};
 	
 }
 
@@ -264,31 +246,124 @@ macro_rules! parse_default_arg {
 macro_rules! parse_final_args {
 	
 	() => {{
-		let mut output = smart_read::MacroArgs::default();
-		output.set_readline_struct = Some(());
-		output
+		smart_read::MacroArgsStage1 {
+			tryread_struct: (),
+		}
 	}};
 	
 	(= $($choice:expr),*) => {{
 		let choices = vec!($($choice,)*);
-		smart_read::MacroArgs {
-			set_input: None,
-			set_prompt: None,
-			set_default: None,
-			set_readline_struct: Some(choices),
+		smart_read::MacroArgsStage1 {
+			tryread_struct: choices,
 		}
 	}};
 	
-	($readline_struct:expr) => {{
-		smart_read::MacroArgs {
-			set_input: None,
-			set_prompt: None,
-			set_default: None,
-			set_readline_struct: Some($readline_struct),
+	($tryread_struct:expr) => {{
+		smart_read::MacroArgsStage1 {
+			tryread_struct: $tryread_struct,
 		}
 	}}
 	
 }
+
+
+
+#[doc(hidden)]
+pub struct MacroArgsStage3<Output, Struct: TryRead> {
+	pub input: Input,
+	pub default: Option<Output>,
+	pub tryread_struct: Struct,
+}
+
+impl<Output, Struct: TryRead> MacroArgsStage3<Output, Struct> {
+	pub fn new(stage_2: MacroArgsStage2<Output, Struct>, input: Input) -> Self {
+		Self {
+			input,
+			default: stage_2.default,
+			tryread_struct: stage_2.tryread_struct,
+		}
+	}
+	pub fn finalize(self, prompt: Option<String>) -> (Struct, TryReadArgs<Output>) {
+		let args = TryReadArgs {
+			input: self.input,
+			prompt,
+			default: self.default,
+		};
+		(self.tryread_struct, args)
+	}
+}
+
+
+
+#[doc(hidden)]
+pub struct MacroArgsStage2<Output, Struct: TryRead> {
+	pub default: Option<Output>,
+	pub tryread_struct: Struct,
+}
+
+impl<Output, Struct: TryRead> MacroArgsStage2<Output, Struct> {
+	pub fn new(stage_1: MacroArgsStage1<Struct>, default: Option<Output>) -> Self {
+		Self {
+			default,
+			tryread_struct: stage_1.tryread_struct,
+		}
+	}
+}
+
+
+
+#[doc(hidden)]
+pub struct MacroArgsStage1<Struct: TryRead> {
+	pub tryread_struct: Struct,
+}
+
+impl<Struct: TryRead> MacroArgsStage1<Struct> {
+	pub fn new(tryread_struct: Struct) -> Self {
+		Self {
+			tryread_struct,
+		}
+	}
+}
+
+
+
+//#[doc(hidden)]
+//#[derive(Default)]
+//pub struct MacroArgs<Output, Struct: TryRead> {
+//	pub set_input: Option<Input>,
+//	pub set_prompt: Option<String>,
+//	pub set_default: Option<Output>,
+//	pub set_tryread_struct: Option<Struct>,
+//}
+
+//impl<Output, Struct: TryRead> MacroArgs<Output, Struct> {
+//	pub fn extend(mut self, other: MacroArgs<Output, Struct>) -> Self {
+//		if other.set_input.is_some() {
+//			self.set_input = other.set_input;
+//		}
+//		if other.set_prompt.is_some() {
+//			self.set_prompt = other.set_prompt;
+//		}
+//		if other.set_default.is_some() {
+//			self.set_default = other.set_default;
+//		}
+//		if other.set_tryread_struct.is_some() {
+//			self.set_tryread_struct = other.set_tryread_struct;
+//		}
+//		self
+//	}
+//	pub fn finalize(self) -> (TryReadArgs<Output>, Struct) {
+//		let read_data = TryReadArgs {
+//			input: match self.set_input {
+//				Some(v) => v,
+//				None => stdin_as_input(),
+//			},
+//			prompt: self.set_prompt,
+//			default: self.set_default,
+//		};
+//		(read_data, self.set_tryread_struct.unwrap_or_else(|| panic!("Internal macro error, MacroArgs.set_tryread_struct is None")))
+//	}
+//}
 
 
 
@@ -364,46 +439,6 @@ impl<T: Into<String>> IntoInput for T {
 			should_stop: None,
 			clean_output: None,
 		}
-	}
-}
-
-
-
-#[doc(hidden)]
-#[derive(Default)]
-pub struct MacroArgs<Output, Struct: TryRead> {
-	pub set_input: Option<Input>,
-	pub set_prompt: Option<String>,
-	pub set_default: Option<Output>,
-	pub set_readline_struct: Option<Struct>,
-}
-
-impl<Output, Struct: TryRead> MacroArgs<Output, Struct> {
-	pub fn extend(mut self, other: MacroArgs<Output, Struct>) -> Self {
-		if other.set_input.is_some() {
-			self.set_input = other.set_input;
-		}
-		if other.set_prompt.is_some() {
-			self.set_prompt = other.set_prompt;
-		}
-		if other.set_default.is_some() {
-			self.set_default = other.set_default;
-		}
-		if other.set_readline_struct.is_some() {
-			self.set_readline_struct = other.set_readline_struct;
-		}
-		self
-	}
-	pub fn finalize(self) -> (TryReadArgs<Output>, Struct) {
-		let read_data = TryReadArgs {
-			input: match self.set_input {
-				Some(v) => v,
-				None => stdin_as_input(),
-			},
-			prompt: self.set_prompt,
-			default: self.set_default,
-		};
-		(read_data, self.set_readline_struct.unwrap_or_else(|| panic!("Internal macro error, MacroArgs.set_readline_struct is None")))
 	}
 }
 
