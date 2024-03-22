@@ -327,46 +327,6 @@ impl<Struct: TryRead> MacroArgsStage1<Struct> {
 
 
 
-//#[doc(hidden)]
-//#[derive(Default)]
-//pub struct MacroArgs<Output, Struct: TryRead> {
-//	pub set_input: Option<Input>,
-//	pub set_prompt: Option<String>,
-//	pub set_default: Option<Output>,
-//	pub set_tryread_struct: Option<Struct>,
-//}
-
-//impl<Output, Struct: TryRead> MacroArgs<Output, Struct> {
-//	pub fn extend(mut self, other: MacroArgs<Output, Struct>) -> Self {
-//		if other.set_input.is_some() {
-//			self.set_input = other.set_input;
-//		}
-//		if other.set_prompt.is_some() {
-//			self.set_prompt = other.set_prompt;
-//		}
-//		if other.set_default.is_some() {
-//			self.set_default = other.set_default;
-//		}
-//		if other.set_tryread_struct.is_some() {
-//			self.set_tryread_struct = other.set_tryread_struct;
-//		}
-//		self
-//	}
-//	pub fn finalize(self) -> (TryReadArgs<Output>, Struct) {
-//		let read_data = TryReadArgs {
-//			input: match self.set_input {
-//				Some(v) => v,
-//				None => stdin_as_input(),
-//			},
-//			prompt: self.set_prompt,
-//			default: self.set_default,
-//		};
-//		(read_data, self.set_tryread_struct.unwrap_or_else(|| panic!("Internal macro error, MacroArgs.set_tryread_struct is None")))
-//	}
-//}
-
-
-
 
 
 // ================================ TYPES ================================ //

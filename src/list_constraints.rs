@@ -7,14 +7,15 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 /// Internal utility function
 pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_args: TryReadArgs<T>) -> BoxResult<(usize, T)> {
-	if choices.len() == 0 {panic!("Cannot read input because there are no choices. (empty list constraint)")}
+	
+	if choices.is_empty() {panic!("Cannot read input because there are no choices. (empty list constraint)")}
 	let prompt = read_args.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
 		.map(ToString::to_string)
 		.collect::<Vec<_>>();
-	loop {
-		
+	
+	let print_prompt = || {
 		println!("{prompt}");
 		for (i, choice) in choice_strings.iter().enumerate() {
 			if let Some(default) = default {
@@ -27,6 +28,17 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: 
 				println!("{choice}");
 			}
 		}
+	};
+	
+	if choices.len() == 1 {
+		print_prompt();
+		println!("Automatically choosing {} since it is the only option.", choices[0]);
+		return Ok((0, choices[0].clone()));
+	}
+	
+	loop {
+		
+		print_prompt();
 		
 		let output = read_string(&mut read_args.input)?;
 		if output.is_empty() && let Some(default) = default {

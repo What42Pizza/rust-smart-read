@@ -2,6 +2,8 @@ use smart_read::prelude::*;
 
 fn main() {
 	
+	prompt!("Enter a number: "; = 1);
+	
 	println!("\n==== `read!()` ====");
 	let input = read!(); // read a line of text
 	println!("You entered: \"{input}\"");
