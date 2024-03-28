@@ -62,6 +62,42 @@ pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usiz
 
 
 
+/// Allows you to add more data to an option
+/// 
+/// Example:
+/// 
+/// ```
+/// // example data
+/// let mut colors = vec!("Red", "green", "Blue");
+/// 
+/// // prepare options, only capitalized colors can be removed
+/// let choosable_colors =
+/// 	colors.iter().enumerate()
+/// 	.filter_map(|(i, color_name)| {
+/// 		let first_char = color_name.chars().next()?;
+/// 		if first_char.is_lowercase() {return None;}
+/// 		Some(OptionWithData {name: color_name.to_string(), data: i})
+/// 	})
+/// 	.collect::<Vec<_>>();
+/// 
+/// // prompt
+/// let OptionWithData {name: _, data: index_to_remove} = prompt!("Choose a color to remove: "; choosable_colors);
+/// colors.remove(index_to_remove);
+/// ```
+#[derive(Clone, PartialEq)]
+pub struct OptionWithData<T: Clone + PartialEq> {
+	pub display_name: String,
+	pub data: T,
+}
+
+impl<T: Clone + PartialEq> Display for OptionWithData<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.display_name)
+	}
+}
+
+
+
 
 
 impl<T: Display + Clone + PartialEq> TryRead for &[T] {
@@ -122,7 +158,7 @@ impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
 
 
 
-/// Returns the index of the chosen item along with the item. Remember to NOT use this if, for example, you filter the choices before feeding them to smart-read
+/// Returns the index of the chosen item along with the item. &nbsp; <b> NOTE </b> : If you filter the inputs before feeding them into EnumerateInput, the indices returns won't match the indices of the initial input. In this case, you might want to use OptionWithData instead
 pub struct EnumerateInput<T: TryRead> (pub T);
 
 impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {
