@@ -2,8 +2,6 @@ use smart_read::prelude::*;
 
 fn main() {
 	
-	prompt!("Enter a number: "; = 1);
-	
 	println!("\n==== `read!()` ====");
 	let input = read!(); // read a line of text
 	println!("You entered: \"{input}\"");
@@ -26,6 +24,10 @@ fn main() {
 	let input = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line 2 above
 	println!("You entered: \"{input}\"");
 	
+	println!("\n==== `prompt!(\"Enter a number: \"; = 1)` ====");
+	let input = prompt!("Enter a number: "; = 1);
+	println!("You entered: \"{input}\"");
+	
 	println!("\n==== `prompt!(\"Which color do you want to remove?\"; EnumerateInput (&*colors));` ====");
 	let mut colors = vec!("red", "green", "blue");
 	let (index, item) = prompt!("Which color do you want to remove?"; EnumerateInput (&*colors)); // get index of chosen option
@@ -40,17 +42,13 @@ fn main() {
 	let input = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
 	println!("You entered: \"{input}\"");
 	
-	println!("\n==== `prompt!(\"Enter an even int: \"; ...);` ====");
+	println!("\n==== `prompt!(\"Enter an even int: \"; TransformValidate(...));` ====");
 	// one-time custom logic
-	let input = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<usize, String> {
-		let Ok(x) = x.parse::<usize>() else {return Err(String::from("Could not parse input."));};
+	let input = prompt!("Enter an even int: "; TransformValidate (|x| {
+		let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input."));};
 		if x % 2 != 0 {return Err(String::from("Input is not even."));}
 		Ok(x)
 	}));
-	println!("You entered: \"{input}\"");
-	
-	println!("\n==== `prompt!(\"This input will come from a string\"; \"input is already given\\r\\n\" >>)` ====");
-	let input = prompt!("This input will come from a string\n"; "input is already given\r\n" >>); // take input from any Result<u8> iterator
 	println!("You entered: \"{input}\"");
 	
 	println!("\n==== `prompt!(\"Enter an int: \"; [1] = 1, 2, 3, 4, 5)` ====");

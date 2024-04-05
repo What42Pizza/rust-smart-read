@@ -119,9 +119,9 @@
 
 #![feature(let_chains)]
 #![allow(clippy::tabs_in_doc_comments)]
-#![warn(clippy::todo, clippy::unwrap_used)]
+#![warn(clippy::todo, clippy::unwrap_used, clippy::panic)]
 
-use std::{error::Error, io::{Read, Write}};
+use std::{error::Error, io::Write};
 
 
 
@@ -168,12 +168,14 @@ macro_rules! read {
 #[macro_export]
 macro_rules! try_read {
 	
-	($($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::TryRead;
-		let stage_3 = smart_read::parse_input_arg!($($args)*);
-		let (tryread_struct, args) = stage_3.finalize(None);
-		tryread_struct.try_read_line(args)
-	}()}};
+	($($args:tt)*) => {|| -> smart_read::BoxResult<_> {
+		use smart_read::{TryRead, TryReadArgs};
+		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
+		tryread_struct.try_read_line(TryReadArgs {
+			prompt: None,
+			default: default,
+		})
+	}()};
 	
 }
 
@@ -193,31 +195,14 @@ macro_rules! try_prompt {
 	
 	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
-	($prompt:expr; $($args:tt)*) => {{|| -> smart_read::BoxResult<_> {
-		use smart_read::TryRead;
-		let stage_3 = smart_read::parse_input_arg!($($args)*);
-		let (tryread_struct, args) = stage_3.finalize(Some($prompt.to_string()));
-		tryread_struct.try_read_line(args)
-	}()}};
-	
-}
-
-
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parse_input_arg {
-	
-	($input:tt >> $($args:tt)*) => {{
-		use smart_read::IntoInput;
-		let stage_2 = smart_read::parse_default_arg!($($args)*);
-		smart_read::MacroArgsStage3::new(stage_2, $input.into_input())
-	}};
-	
-	($($args:tt)*) => {{
-		let stage_2 = smart_read::parse_default_arg!($($args)*);
-		smart_read::MacroArgsStage3::new(stage_2, smart_read::stdin_as_input())
-	}};
+	($prompt:expr; $($args:tt)*) => {|| -> smart_read::BoxResult<_> {
+		use smart_read::{TryRead, TryReadArgs};
+		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
+		tryread_struct.try_read_line(TryReadArgs {
+			prompt: Some($prompt.to_string()),
+			default: default,
+		})
+	}()};
 	
 }
 
@@ -227,15 +212,13 @@ macro_rules! parse_input_arg {
 #[doc(hidden)]
 macro_rules! parse_default_arg {
 	
-	([$default:expr] $($args:tt)*) => {{
-		let stage_1 = smart_read::parse_final_args!($($args)*);
-		smart_read::MacroArgsStage2::new(stage_1, Some($default.into()))
-	}};
+	([$default:expr] $($args:tt)*) => {
+		(Some($default.into()), smart_read::parse_final_args!($($args)*))
+	};
 	
-	($($args:tt)*) => {{
-		let stage_1 = smart_read::parse_final_args!($($args)*);
-		smart_read::MacroArgsStage2::new(stage_1, None)
-	}};
+	($($args:tt)*) => {
+		(None, smart_read::parse_final_args!($($args)*))
+	};
 	
 }
 
@@ -245,84 +228,18 @@ macro_rules! parse_default_arg {
 #[doc(hidden)]
 macro_rules! parse_final_args {
 	
-	() => {{
-		smart_read::MacroArgsStage1 {
-			tryread_struct: (),
-		}
-	}};
+	() => {
+		()
+	};
 	
-	(= $($choice:expr),*) => {{
-		let choices = vec!($($choice,)*);
-		smart_read::MacroArgsStage1 {
-			tryread_struct: choices,
-		}
-	}};
+	(= $($choice:expr),*) => {
+		vec!($($choice,)*)
+	};
 	
-	($tryread_struct:expr) => {{
-		smart_read::MacroArgsStage1 {
-			tryread_struct: $tryread_struct,
-		}
-	}}
+	($tryread_struct:expr) => {
+		$tryread_struct
+	}
 	
-}
-
-
-
-#[doc(hidden)]
-pub struct MacroArgsStage3<Output, Struct: TryRead> {
-	pub input: Input,
-	pub default: Option<Output>,
-	pub tryread_struct: Struct,
-}
-
-impl<Output, Struct: TryRead> MacroArgsStage3<Output, Struct> {
-	pub fn new(stage_2: MacroArgsStage2<Output, Struct>, input: Input) -> Self {
-		Self {
-			input,
-			default: stage_2.default,
-			tryread_struct: stage_2.tryread_struct,
-		}
-	}
-	pub fn finalize(self, prompt: Option<String>) -> (Struct, TryReadArgs<Output>) {
-		let args = TryReadArgs {
-			input: self.input,
-			prompt,
-			default: self.default,
-		};
-		(self.tryread_struct, args)
-	}
-}
-
-
-
-#[doc(hidden)]
-pub struct MacroArgsStage2<Output, Struct: TryRead> {
-	pub default: Option<Output>,
-	pub tryread_struct: Struct,
-}
-
-impl<Output, Struct: TryRead> MacroArgsStage2<Output, Struct> {
-	pub fn new(stage_1: MacroArgsStage1<Struct>, default: Option<Output>) -> Self {
-		Self {
-			default,
-			tryread_struct: stage_1.tryread_struct,
-		}
-	}
-}
-
-
-
-#[doc(hidden)]
-pub struct MacroArgsStage1<Struct: TryRead> {
-	pub tryread_struct: Struct,
-}
-
-impl<Struct: TryRead> MacroArgsStage1<Struct> {
-	pub fn new(tryread_struct: Struct) -> Self {
-		Self {
-			tryread_struct,
-		}
-	}
 }
 
 
@@ -348,58 +265,8 @@ pub trait TryRead {
 
 /// This contains all possible information about the read / prompt
 pub struct TryReadArgs<Output> {
-	pub input: Input,
 	pub prompt: Option<String>,
 	pub default: Option<Output>,
-}
-
-
-
-/// Specifies the source of user input
-/// 
-/// If should_stop is None, it defaults to stopping once \n is read
-/// 
-/// If clean_output is None, it defaults to removing a trailing \n (if found) then a trailing \r (if found)
-pub struct Input {
-	pub iter: Box<dyn Iterator<Item = BoxResult<u8>>>,
-	pub needs_std_flush: bool,
-	pub should_stop: Option<fn(&[u8]) -> bool>,
-	pub clean_output: Option<fn(Vec<u8>) -> Vec<u8>>,
-}
-
-impl Input {
-	/// Needs to be called to prevent prints before the read appearing after the read
-	pub fn flush_std_if_needed(&self) -> BoxResult<()>{
-		if self.needs_std_flush {std::io::stdout().flush()?;}
-		Ok(())
-	}
-}
-
-
-
-/// Allows a type to be used as input. Example:
-/// 
-/// ```
-/// pub struct TerminalInput;
-/// impl IntoInput for TerminalInput {
-/// 	...
-/// }
-/// 
-/// read!(TerminalInput >>);
-/// ```
-pub trait IntoInput {
-	fn into_input(self) -> Input;
-}
-
-impl<T: Into<String>> IntoInput for T {
-	fn into_input(self) -> Input {
-		Input {
-			iter: Box::new(self.into().into_bytes().into_iter().map(Ok)),
-			needs_std_flush: false,
-			should_stop: None,
-			clean_output: None,
-		}
-	}
 }
 
 
@@ -411,45 +278,13 @@ impl<T: Into<String>> IntoInput for T {
 
 
 /// Utility function, mostly for internal use
-pub fn read_string(input: &mut Input) -> BoxResult<String> {
-	
-	fn default_should_stop(input: &[u8]) -> bool {input.last() == Some(&10)}
-	let should_stop = input.should_stop.unwrap_or(default_should_stop);
-	fn default_clean_output(mut output: Vec<u8>) -> Vec<u8> {
-		if output.last() == Some(&10) {output.pop();} // pop \n
-		if output.last() == Some(&13) {output.pop();} // pop \r
-		output
-	}
-	let clean_output = input.clean_output.unwrap_or(default_clean_output);
-	
-	input.flush_std_if_needed()?;
-	let mut output = vec!();
-	loop {
-		let Some(next) = input.iter.next() else {break};
-		output.push(next?);
-		if should_stop(&output) {break}
-	}
-	let output = clean_output(output);
-	let output = String::from_utf8(output)?;
-	
+pub fn read_stdin() -> BoxResult<String> {
+	std::io::stdout().flush()?;
+	let mut output = String::new();
+	std::io::stdin().read_line(&mut output)?;
+	if output.ends_with('\n') {output.pop();}
+	if output.ends_with('\r') {output.pop();}
 	Ok(output)
-}
-
-
-
-/// Utility function, mostly for internal use
-pub fn stdin_as_input() -> Input {
-	let output = std::io::stdin()
-		.bytes()
-		.map(|b|
-			b.map_err(|e| Box::new(e) as Box<dyn Error>)
-		);
-	Input {
-		iter: Box::new(output),
-		needs_std_flush: true,
-		should_stop: None,
-		clean_output: None,
-	}
 }
 
 

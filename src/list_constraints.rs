@@ -6,9 +6,9 @@ use std::{collections::{LinkedList, VecDeque}, fmt::Display};
 
 
 /// Internal utility function
-pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: Option<usize>, mut read_args: TryReadArgs<T>) -> BoxResult<(usize, T)> {
+pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: Option<usize>, read_args: TryReadArgs<T>) -> BoxResult<(usize, T)> {
+	if choices.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
-	if choices.is_empty() {panic!("Cannot read input because there are no choices. (empty list constraint)")}
 	let prompt = read_args.prompt.unwrap_or(String::from("Enter one of the following:"));
 	let choice_strings =
 		choices.iter()
@@ -40,7 +40,7 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: 
 		
 		print_prompt();
 		
-		let output = read_string(&mut read_args.input)?;
+		let output = read_stdin()?;
 		if output.is_empty() && let Some(default) = default {
 			return Ok((default, choices[default].clone()));
 		}
@@ -58,6 +58,20 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: 
 /// Internal utility function
 pub fn read_input_option<T: Display + Clone>(choices: &[T], default: Option<usize>, read_args: TryReadArgs<T>) -> BoxResult<T> {
 	read_input_option_enumerated(choices, default, read_args).map(|(_index, output)| output)
+}
+
+/// Error type
+#[derive(Debug)]
+pub enum ListConstraintError {
+	EmptyList,
+}
+
+impl Error for ListConstraintError {}
+
+impl Display for ListConstraintError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "List Constraint is empty")
+	}
 }
 
 
@@ -170,7 +184,6 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {
 			None
 		};
 		let read_args = TryReadArgs {
-			input: read_args.input,
 			prompt: read_args.prompt,
 			default: read_args.default.map(|(_index, item)| item),
 		};
@@ -187,7 +200,6 @@ impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for EnumerateInpu
 			None
 		};
 		let read_args = TryReadArgs {
-			input: read_args.input,
 			prompt: read_args.prompt,
 			default: read_args.default.map(|(_index, item)| item),
 		};
@@ -204,7 +216,6 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>> {
 			None
 		};
 		let read_args = TryReadArgs {
-			input: read_args.input,
 			prompt: read_args.prompt,
 			default: read_args.default.map(|(_index, item)| item),
 		};
@@ -221,7 +232,6 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>> {
 			None
 		};
 		let read_args = TryReadArgs {
-			input: read_args.input,
 			prompt: read_args.prompt,
 			default: read_args.default.map(|(_index, item)| item),
 		};
@@ -239,7 +249,6 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>> {
 			None
 		};
 		let read_args = TryReadArgs {
-			input: read_args.input,
 			prompt: read_args.prompt,
 			default: read_args.default.map(|(_index, item)| item),
 		};

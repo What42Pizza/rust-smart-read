@@ -4,7 +4,7 @@ use std::{fmt::Display, ops::{Range, RangeBounds, RangeFrom, RangeInclusive, Ran
 
 
 /// Internal utility function
-pub fn read_range<T: Display + FromStr + PartialOrd<T>, R: RangeBounds<T>>(range: &R, mut read_args: TryReadArgs<T>, format: fn(&R) -> String) -> BoxResult<T> {
+pub fn read_range<T: Display + FromStr + PartialOrd<T>, R: RangeBounds<T>>(range: &R, read_args: TryReadArgs<T>, format: fn(&R) -> String) -> BoxResult<T> {
 	let mut prompt = match read_args.prompt {
 		Some(v) => v,
 		None => format!("Enter a number within the range {}: ", format(range)),
@@ -15,7 +15,7 @@ pub fn read_range<T: Display + FromStr + PartialOrd<T>, R: RangeBounds<T>>(range
 	loop {
 		
 		print!("{prompt}");
-		let output_string = read_string(&mut read_args.input)?;
+		let output_string = read_stdin()?;
 		if output_string.is_empty() && let Some(default) = read_args.default {
 			return Ok(default);
 		}

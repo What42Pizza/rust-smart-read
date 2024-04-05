@@ -16,7 +16,7 @@ fn main() {
 
 impl TryRead for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, mut read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
 		assert!(read_data.default.is_none());
 		let prompt = read_data.prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
@@ -24,7 +24,7 @@ impl TryRead for PasswordInput {
 		loop {
 			
 			print!("{prompt}");
-			let password = read_string(&mut read_data.input)?;
+			let password = read_stdin()?;
 			
 			if password.len() < 10 {
 				println!("Password must have at least 10 characters");

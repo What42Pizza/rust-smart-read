@@ -6,35 +6,33 @@
 
 ### Basic Usage
 
-```
+```rust
 let _ = read!(); // read a line of text
 
 let _ = prompt!("Enter a string: "); // prompt a line of text
 
 let _ = read!(["two"]); // read a line of text with a default 
 
-let _ = read!(= "red", "green", "blue"); // receive specific inputs
-let _ = prompt!("Enter a color: "; = "red", "green", "blue");
-let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // same as line above
-
-let mut colors = vec!("red", "green", "blue");
-let (index, _item) = prompt!("Which color do you want to remove?"; EnumerateInput(&*colors)); // get index of chosen option
-colors.remove(index);
+let _ = prompt!("Enter a color: "; &["red", "green", "blue"]); // receive specific inputs
+let _ = prompt!("Enter a color: "; = "red", "green", "blue"); // some inputs have special syntax
 
 let _ = read!(0. ..= 100.); // take a number within a range
 
 let _ = prompt!("Confirm input: "; [true] YesNoInput); // read a bool
 
+// get index of chosen option
+let mut colors = vec!("red", "green", "blue");
+let (index, _item) = prompt!("Which color do you want to remove?"; EnumerateInput(&*colors));
+colors.remove(index);
+
 // one-time custom logic
-let _ = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<usize, String> { // explicit types here are optional, only added for demonstration
-	let Ok(x) = x.parse::<usize>() else {return Err(String::from("Could not parse input."));};
+let _ = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
+	let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input."));};
 	if x % 2 != 0 {return Err(String::from("Input is not even."));}
 	Ok(x)
 }));
 
-let _ = prompt!("This input will come from a string"; "input is already given\r\n" >>); // take input from anything that impls Input
-
-let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine anything
+let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine any features
 ```
 
 <br>
@@ -56,7 +54,7 @@ Enter a number within the range [0.0, 100.0]:
 
 ### Extend Existing Functionality
 
-```
+```rust
 use smart_read::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -85,7 +83,7 @@ impl std::fmt::Display for Car {
 
 ### Add New Functionality
 
-```
+```rust
 use smart_read::*;
 
 struct PasswordInput {
@@ -100,7 +98,7 @@ fn main() {
 
 impl TryRead for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, mut read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
+	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
 		assert!(read_data.default.is_none());
 		let prompt = read_data.prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
@@ -108,7 +106,7 @@ impl TryRead for PasswordInput {
 		loop {
 			
 			print!("{prompt}");
-			let password = read_string(&mut read_data.input)?;
+			let password = read_stdin()?;
 			
 			if password.len() < 10 {
 				println!("Password must have at least 10 characters");
@@ -124,4 +122,5 @@ impl TryRead for PasswordInput {
 		}
 	}
 }
+
 ```
