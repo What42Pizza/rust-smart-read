@@ -119,7 +119,7 @@
 
 #![feature(let_chains)]
 #![allow(clippy::tabs_in_doc_comments)]
-#![warn(clippy::todo, clippy::unwrap_used, clippy::panic)]
+#![warn(clippy::todo, clippy::unwrap_used, clippy::panic, clippy::expect_used)]
 
 use std::{error::Error, io::Write};
 

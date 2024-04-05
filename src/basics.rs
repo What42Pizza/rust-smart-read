@@ -28,7 +28,7 @@ pub struct NonEmptyInput;
 impl TryRead for NonEmptyInput {
 	type Output = String;
 	fn try_read_line(&self, read_args: TryReadArgs<String>) -> BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or(String::new());
+		let mut prompt = read_args.prompt.unwrap_or_default();
 		if let Some(default) = read_args.default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
@@ -51,7 +51,7 @@ pub struct NonWhitespaceInput;
 impl TryRead for NonWhitespaceInput {
 	type Output = String;
 	fn try_read_line(&self, read_args: TryReadArgs<String>) -> BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or(String::new());
+		let mut prompt = read_args.prompt.unwrap_or_default();
 		if let Some(default) = read_args.default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
