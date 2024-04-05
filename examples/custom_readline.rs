@@ -7,6 +7,7 @@ struct PasswordInput {
 	pub min_digits: usize,
 }
 
+// take in a password input
 fn main() {
 	let input = read!(PasswordInput {min_len: 10, min_digits: 1});
 	println!("You entered: \"{input}\"");
@@ -17,7 +18,7 @@ fn main() {
 impl TryRead for PasswordInput {
 	type Output = String;
 	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
-		assert!(read_data.default.is_none());
+		if read_data.default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = read_data.prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
 		);

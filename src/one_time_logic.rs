@@ -1,5 +1,4 @@
 use crate::*;
-use std::fmt::Display;
 
 
 
@@ -19,7 +18,10 @@ impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F> {
 			let input = read_stdin()?;
 			match (self.0)(&input) {
 				Ok(_) => return Ok(input),
-				Err(error_message) => println!("{error_message}"),
+				Err(error_message) => {
+					println!();
+					println!("{error_message}")
+				}
 			}
 			
 		}
@@ -44,7 +46,10 @@ impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValida
 			let input = read_stdin()?;
 			match (self.0)(input) {
 				Ok(output) => return Ok(output),
-				Err(error_message) => println!("{error_message}"),
+				Err(error_message) => {
+					println!();
+					println!("{error_message}")
+				}
 			}
 			
 		}

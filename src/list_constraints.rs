@@ -1,5 +1,5 @@
 use crate::*;
-use std::{collections::{LinkedList, VecDeque}, fmt::Display};
+use std::collections::{LinkedList, VecDeque};
 
 
 
@@ -32,7 +32,8 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: 
 	
 	if choices.len() == 1 {
 		print_prompt();
-		println!("Automatically choosing {} since it is the only option.", choices[0]);
+		println!();
+		println!("Automatically choosing {} since it is the only option", choices[0]);
 		return Ok((0, choices[0].clone()));
 	}
 	
@@ -51,7 +52,8 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], default: 
 			}
 		}
 		
-		println!("Invalid option.");
+		println!();
+		println!("Invalid option");
 	}
 }
 
@@ -70,7 +72,9 @@ impl Error for ListConstraintError {}
 
 impl Display for ListConstraintError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "List Constraint is empty")
+		match self {
+			Self::EmptyList => write!(f, "List Constraint is empty"),
+		}
 	}
 }
 

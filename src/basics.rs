@@ -36,7 +36,11 @@ impl TryRead for NonEmptyInput {
 			
 			print!("{prompt}");
 			let input = read_stdin()?;
-			if input.is_empty() {println!("Invalid input, must not be empty."); continue;}
+			if input.is_empty() {
+				println!();
+				println!("Invalid input, must not be empty");
+				continue;
+			}
 			return BoxResult::Ok(input);
 			
 		}
@@ -59,7 +63,11 @@ impl TryRead for NonWhitespaceInput {
 			
 			print!("{prompt}");
 			let input = read_stdin()?;
-			if input.trim().is_empty() {println!("Invalid input, must contain non-whitespace characters."); continue;}
+			if input.trim().is_empty() {
+				println!();
+				println!("Invalid input, must contain non-whitespace characters");
+				continue;
+			}
 			return BoxResult::Ok(input);
 			
 		}
@@ -86,7 +94,10 @@ impl TryRead for BoolInput {
 				("", Some(default)) => return Ok(default),
 				("true", _) | ("t", _) => return Ok(true),
 				("false", _) | ("f", _) => return Ok(false),
-				(_, _) => println!("Invalid input."),
+				(_, _) => {
+					println!();
+					println!("Invalid input, please enter \"true\" or \"false\"");
+				}
 			}
 			
 		}
@@ -113,7 +124,10 @@ impl TryRead for YesNoInput {
 				("", Some(default)) => return Ok(default),
 				("yes", _) | ("y", _) => return Ok(true),
 				("no", _) | ("n", _) => return Ok(false),
-				(_, _) => println!("Invalid input."),
+				(_, _) => {
+					println!();
+					println!("Invalid input, please enter \"yes\" or \"no\"");
+				}
 			}
 			
 		}
@@ -139,9 +153,13 @@ macro_rules! implement_number_input {
 						return Ok(default);
 					}
 					
-					let Ok(input) = input_string.parse::<$type_base>() else {
-						println!("Could not parse input.");
-						continue;
+					let input = match input_string.parse::<$type_base>() {
+						Ok(v) => v,
+						Err(err) => {
+							println!();
+							println!("Could not parse input (error: {err})");
+							continue;
+						}
 					};
 					return Ok(input);
 					
@@ -157,51 +175,51 @@ implement_number_input!(CharInput, char, "Enter a character: ");
 
 /// Allows you take take a usize input
 pub struct UsizeInput;
-implement_number_input!(UsizeInput, usize, "Enter an unsigned int: ");
+implement_number_input!(UsizeInput, usize, "Enter a number (positive integer): ");
 
 /// Allows you take take an isize input
 pub struct IsizeInput;
-implement_number_input!(IsizeInput, isize, "Enter an int: ");
+implement_number_input!(IsizeInput, isize, "Enter a number (integer): ");
 
 /// Allows you take take a u8 input
 pub struct U8Input;
-implement_number_input!(U8Input, u8, "Enter an int (u8): ");
+implement_number_input!(U8Input, u8, "Enter a number (positive integer): ");
 
 /// Allows you take take an i8 input
 pub struct I8Input;
-implement_number_input!(I8Input, i8, "Enter an int (i8): ");
+implement_number_input!(I8Input, i8, "Enter a number (integer): ");
 
 /// Allows you take take a u16 input
 pub struct U16Input;
-implement_number_input!(U16Input, u16, "Enter an int (u16): ");
+implement_number_input!(U16Input, u16, "Enter a number (positive integer): ");
 
 /// Allows you take take an i16 input
 pub struct I16Input;
-implement_number_input!(I16Input, i16, "Enter an int (i16): ");
+implement_number_input!(I16Input, i16, "Enter a number (integer): ");
 
 /// Allows you take take a u32 input
 pub struct U32Input;
-implement_number_input!(U32Input, u32, "Enter an int (u32): ");
+implement_number_input!(U32Input, u32, "Enter a number (positive integer): ");
 
 /// Allows you take take an i32 input
 pub struct I32Input;
-implement_number_input!(I32Input, i32, "Enter an int (i32): ");
+implement_number_input!(I32Input, i32, "Enter a number (integer): ");
 
 /// Allows you take take a u64 input
 pub struct U64Input;
-implement_number_input!(U64Input, u64, "Enter an int (u64): ");
+implement_number_input!(U64Input, u64, "Enter a number (positive integer): ");
 
 /// Allows you take take an i64 input
 pub struct I64Input;
-implement_number_input!(I64Input, i64, "Enter an int (i64): ");
+implement_number_input!(I64Input, i64, "Enter a number (integer): ");
 
 /// Allows you take take a u128 input
 pub struct U128Input;
-implement_number_input!(U128Input, u128, "Enter an int (u128): ");
+implement_number_input!(U128Input, u128, "Enter a number (positive integer): ");
 
 /// Allows you take take an i128 input
 pub struct I128Input;
-implement_number_input!(I128Input, i128, "Enter an int (i128): ");
+implement_number_input!(I128Input, i128, "Enter a number (integer): ");
 
 /// Allows you take take an f32 input
 pub struct F32Input;

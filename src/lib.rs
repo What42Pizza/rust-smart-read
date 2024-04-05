@@ -9,7 +9,7 @@
 //! <br>
 //! <br>
 //! 
-//! ## Types that implement TryRead:
+//! ## Types that implement TryRead (basically, all default functionality):
 //! 
 //! <br>
 //! 
@@ -56,6 +56,7 @@
 //! impl<T: Display + Clone + PartialEq> TryRead for Vec<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T>
+//! // NOTE: If the options are filtered before being fed into smart-read, you should probably use OptionWithData<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]>
 //! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T; _]>
 //! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>>
@@ -71,17 +72,17 @@
 //! 
 //! Implemented types:
 //! ```
-//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for Range<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeInclusive<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeTo<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeFrom<T>
-//! impl<T: Display + FromStr + PartialOrd<T>> TryRead for RangeToInclusive<T>
+//! impl<T> TryRead for Range<T>            where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
+//! impl<T> TryRead for RangeInclusive<T>   where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
+//! impl<T> TryRead for RangeTo<T>          where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
+//! impl<T> TryRead for RangeFrom<T>        where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
+//! impl<T> TryRead for RangeToInclusive<T> where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
 //! ```
 //! 
 //! <br>
 //! <br>
 //! 
-//! ## Extra Functionality:
+//! # Extra Functionality
 //! 
 //! In addition to the type of input, data can be added at the start of `read!()` / `prompt!()`. In order, these additions are:
 //! 
@@ -93,19 +94,13 @@
 //! 
 //! <br>
 //! 
-//! ### Custom Input
-//! 
-//! `input >>` (must implement crate's `IntoInput`)
-//! 
-//! <br>
-//! 
 //! ### Default Value
 //! 
 //! `[default_value]`
 //! 
 //! <br>
 //! 
-//! #### Example: &nbsp; `prompt!("Enter a color: "; prev_user_input >> ["red"] = "red", "green", "blue")`
+//! ##### Example: &nbsp; `prompt!("Enter a color: "; prev_user_input >> ["red"] = "red", "green", "blue")`
 //! 
 //! <br>
 //! <br>
@@ -121,7 +116,7 @@
 #![allow(clippy::tabs_in_doc_comments)]
 #![warn(clippy::todo, clippy::unwrap_used, clippy::panic, clippy::expect_used)]
 
-use std::{error::Error, io::Write};
+use std::{error::Error, fmt::{Debug, Display}, io::Write};
 
 
 
@@ -267,6 +262,44 @@ pub trait TryRead {
 pub struct TryReadArgs<Output> {
 	pub prompt: Option<String>,
 	pub default: Option<Output>,
+}
+
+
+
+#[derive(Debug)]
+pub struct DefaultNotAllowedError;
+
+impl Error for DefaultNotAllowedError {}
+
+impl Display for DefaultNotAllowedError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Default value is not allowed for input type.")
+	}
+}
+
+impl DefaultNotAllowedError {
+	pub fn new_box_result<T>() -> BoxResult<T> {
+		Err(Box::new(Self))
+	}
+}
+
+
+
+#[derive(Debug)]
+pub struct PromptNotAllowedError;
+
+impl Error for PromptNotAllowedError {}
+
+impl Display for PromptNotAllowedError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Prompt value is not allowed for input type.")
+	}
+}
+
+impl PromptNotAllowedError {
+	pub fn new_box_result<T>() -> BoxResult<T> {
+		Err(Box::new(Self))
+	}
 }
 
 

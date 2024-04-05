@@ -8,6 +8,7 @@ pub struct Car {
 	pub color: String,
 }
 
+// choose from a list of cars
 fn main() {
 	let input = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
 	println!("You chose: {input}");
