@@ -4,15 +4,15 @@ use crate::*;
 
 impl TryRead for () {
 	type Output = String;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
-		match (read_args.prompt, &read_args.default) {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+		match (prompt, &default) {
 			(Some(prompt), Some(default)) => print!("{prompt}(default: {default}) "),
 			(None, Some(default)) => print!("(default: {default}) "),
 			(Some(prompt), None) => print!("{prompt}"),
 			(None, None) => {},
 		}
 		let output = read_stdin()?;
-		Ok(if output.is_empty() && let Some(default) = read_args.default {
+		Ok(if output.is_empty() && let Some(default) = default {
 			default
 		} else {
 			output
@@ -27,9 +27,9 @@ pub struct NonEmptyInput;
 
 impl TryRead for NonEmptyInput {
 	type Output = String;
-	fn try_read_line(&self, read_args: TryReadArgs<String>) -> BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or_default();
-		if let Some(default) = read_args.default.as_ref() {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+		let mut prompt = prompt.unwrap_or_default();
+		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
 		loop {
@@ -54,9 +54,9 @@ pub struct NonWhitespaceInput;
 
 impl TryRead for NonWhitespaceInput {
 	type Output = String;
-	fn try_read_line(&self, read_args: TryReadArgs<String>) -> BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or_default();
-		if let Some(default) = read_args.default.as_ref() {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+		let mut prompt = prompt.unwrap_or_default();
+		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
 		loop {
@@ -81,16 +81,16 @@ pub struct BoolInput;
 
 impl TryRead for BoolInput {
 	type Output = bool;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> crate::BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or(String::from("Enter a bool: "));
-		if let Some(default) = read_args.default.as_ref() {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
+		let mut prompt = prompt.unwrap_or(String::from("Enter a bool: "));
+		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
 		}
 		loop {
 			
 			print!("{prompt}");
 			let input = read_stdin()?.to_lowercase();
-			match (&*input, read_args.default) {
+			match (&*input, default) {
 				("", Some(default)) => return Ok(default),
 				("true", _) | ("t", _) => return Ok(true),
 				("false", _) | ("f", _) => return Ok(false),
@@ -111,16 +111,16 @@ pub struct YesNoInput;
 
 impl TryRead for YesNoInput {
 	type Output = bool;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> crate::BoxResult<Self::Output> {
-		let mut prompt = read_args.prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
-		if let Some(default) = read_args.default.as_ref() {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
+		let mut prompt = prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
+		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {}) ", if *default {"Yes"} else {"No"});
 		}
 		loop {
 			
 			print!("{prompt}");
 			let input = read_stdin()?.to_lowercase();
-			match (&*input, read_args.default) {
+			match (&*input, default) {
 				("", Some(default)) => return Ok(default),
 				("yes", _) | ("y", _) => return Ok(true),
 				("no", _) | ("n", _) => return Ok(false),
@@ -140,16 +140,16 @@ macro_rules! implement_number_input {
 	($type_name:tt, $type_base:ty, $default_prompt:expr) => {
 		impl TryRead for $type_name {
 			type Output = $type_base;
-			fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> crate::BoxResult<Self::Output> {
-				let mut prompt = read_args.prompt.unwrap_or(String::from($default_prompt));
-				if let Some(default) = read_args.default.as_ref() {
+			fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> crate::BoxResult<Self::Output> {
+				let mut prompt = prompt.unwrap_or(String::from($default_prompt));
+				if let Some(default) = default.as_ref() {
 					prompt += &format!("(default: {default}) ");
 				}
 				loop {
 					
 					print!("{prompt}");
 					let input_string = read_stdin()?;
-					if input_string.is_empty() && let Some(default) = read_args.default {
+					if input_string.is_empty() && let Some(default) = default {
 						return Ok(default);
 					}
 					

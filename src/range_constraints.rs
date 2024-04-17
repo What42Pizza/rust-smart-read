@@ -4,24 +4,24 @@ use std::{ops::{Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, RangeToI
 
 
 /// Internal utility function
-pub fn read_range<T, R>(range: &R, read_args: TryReadArgs<T>, format: fn(&R) -> String) -> BoxResult<T>
+pub fn read_range<T, R>(range: &R, prompt: Option<String>, default: Option<T>, format: fn(&R) -> String) -> BoxResult<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	R: RangeBounds<T>,
 	<T as FromStr>::Err: Display,
 {
-	let mut prompt = match read_args.prompt {
+	let mut prompt = match prompt {
 		Some(v) => v,
 		None => format!("Enter a number within the range {}: ", format(range)),
 	};
-	if let Some(default) = read_args.default.as_ref() {
+	if let Some(default) = default.as_ref() {
 		prompt += &format!(" (default: {default})");
 	}
 	loop {
 		
 		print!("{prompt}");
 		let output_string = read_stdin()?;
-		if output_string.is_empty() && let Some(default) = read_args.default {
+		if output_string.is_empty() && let Some(default) = default {
 			return Ok(default);
 		}
 		
@@ -50,11 +50,11 @@ where
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &Range<impl Display>) -> String {
 			format!("[{:.1}, {:.1})", range.start, range.end)
 		}
-		read_range(self, read_args, format)
+		read_range(self, prompt, default, format)
 	}
 }
 
@@ -64,11 +64,11 @@ where
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeInclusive<impl Display>) -> String {
 			format!("[{:.1}, {:.1}]", range.start(), range.end())
 		}
-		read_range(self, read_args, format)
+		read_range(self, prompt, default, format)
 	}
 }
 
@@ -78,11 +78,11 @@ where
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeTo<impl Display>) -> String {
 			format!(".., {:.1})", range.end)
 		}
-		read_range(self, read_args, format)
+		read_range(self, prompt, default, format)
 	}
 }
 
@@ -92,11 +92,11 @@ where
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeFrom<impl Display>) -> String {
 			format!("[{:.1}, ..", range.start)
 		}
-		read_range(self, read_args, format)
+		read_range(self, prompt, default, format)
 	}
 }
 
@@ -106,10 +106,10 @@ where
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output> {
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeToInclusive<impl Display>) -> String {
 			format!(".., {:.1}]", range.end)
 		}
-		read_range(self, read_args, format)
+		read_range(self, prompt, default, format)
 	}
 }

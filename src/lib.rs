@@ -100,7 +100,7 @@
 //! 
 //! <br>
 //! 
-//! ##### Example: &nbsp; `prompt!("Enter a color: "; prev_user_input >> ["red"] = "red", "green", "blue")`
+//! ##### Example: &nbsp; `prompt!("Enter a color: "; ["red"] = "red", "green", "blue")`
 //! 
 //! <br>
 //! <br>
@@ -114,7 +114,7 @@
 
 #![feature(let_chains)]
 #![allow(clippy::tabs_in_doc_comments)]
-#![warn(clippy::todo, clippy::unwrap_used, clippy::panic, clippy::expect_used)]
+#![warn(missing_docs, clippy::todo, clippy::unwrap_used, clippy::panic, clippy::expect_used)]
 
 use std::{error::Error, fmt::{Debug, Display}, io::Write};
 
@@ -164,12 +164,9 @@ macro_rules! read {
 macro_rules! try_read {
 	
 	($($args:tt)*) => {|| -> smart_read::BoxResult<_> {
-		use smart_read::{TryRead, TryReadArgs};
+		use smart_read::TryRead;
 		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
-		tryread_struct.try_read_line(TryReadArgs {
-			prompt: None,
-			default: default,
-		})
+		tryread_struct.try_read_line(None, default)
 	}()};
 	
 }
@@ -191,12 +188,9 @@ macro_rules! try_prompt {
 	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
 	($prompt:expr; $($args:tt)*) => {|| -> smart_read::BoxResult<_> {
-		use smart_read::{TryRead, TryReadArgs};
+		use smart_read::TryRead;
 		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
-		tryread_struct.try_read_line(TryReadArgs {
-			prompt: Some($prompt.to_string()),
-			default: default,
-		})
+		tryread_struct.try_read_line(Some($prompt.to_string()), default)
 	}()};
 	
 }
@@ -252,20 +246,15 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
 pub trait TryRead {
+	/// Defines the output of `read` and `prompt` macros
 	type Output;
-	fn try_read_line(&self, read_args: TryReadArgs<Self::Output>) -> BoxResult<Self::Output>;
+	/// This is what's called by the `read` and `prompt` macros
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output>;
 }
 
 
 
-/// This contains all possible information about the read / prompt
-pub struct TryReadArgs<Output> {
-	pub prompt: Option<String>,
-	pub default: Option<Output>,
-}
-
-
-
+/// Useful pre-made error
 #[derive(Debug)]
 pub struct DefaultNotAllowedError;
 
@@ -278,6 +267,7 @@ impl Display for DefaultNotAllowedError {
 }
 
 impl DefaultNotAllowedError {
+	/// Easily get a return value
 	pub fn new_box_result<T>() -> BoxResult<T> {
 		Err(Box::new(Self))
 	}
@@ -285,6 +275,7 @@ impl DefaultNotAllowedError {
 
 
 
+/// Useful pre-made error
 #[derive(Debug)]
 pub struct PromptNotAllowedError;
 
@@ -297,6 +288,7 @@ impl Display for PromptNotAllowedError {
 }
 
 impl PromptNotAllowedError {
+	/// Easily get a return value
 	pub fn new_box_result<T>() -> BoxResult<T> {
 		Err(Box::new(Self))
 	}

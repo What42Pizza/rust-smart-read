@@ -24,7 +24,7 @@ Anything that implements [TryRead](https://docs.rs/smart-read/latest/smart_read/
 
 ### Basic Usage
 
-```rust
+```
 // read a line of text
 let _ = read!();
 
@@ -87,7 +87,7 @@ You entered: "1"
 
 ### Extend Existing Functionality
 
-```rust
+```
 use smart_read::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -117,7 +117,7 @@ impl std::fmt::Display for Car {
 
 ### Add New Functionality
 
-```rust
+```
 use smart_read::*;
 
 struct PasswordInput {
