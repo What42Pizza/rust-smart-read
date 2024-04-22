@@ -36,24 +36,34 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], prompt: O
 		println!("Automatically choosing {} since it is the only option", choices[0]);
 		return Ok((0, choices[0].clone()));
 	}
+		
+	print_prompt();
+	let mut input = read_stdin()?;
 	
 	loop {
-		
-		print_prompt();
-		
-		let output = read_stdin()?;
-		if output.is_empty() && let Some(default) = default {
+		if input.is_empty() && let Some(default) = default {
 			return Ok((default, choices[default].clone()));
 		}
 		
+		// find exact match
 		for (i, choice) in choice_strings.iter().enumerate() {
-			if choice.eq_ignore_ascii_case(&output) {
+			if choice.eq_ignore_ascii_case(&input) {
 				return Ok((i, choices[i].clone()));
 			}
 		}
 		
 		println!();
-		println!("Invalid option");
+		println!("Invalid option.");
+		
+		// try fuzzy match
+		let possible_choice_index = custom_fuzzy_search(&input, &choice_strings);
+		print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", choice_strings[possible_choice_index]);
+		let new_input = read_stdin()?;
+		if new_input.is_empty() {
+			return Ok((possible_choice_index, choices[possible_choice_index].clone()));
+		}
+		input = new_input;
+		
 	}
 }
 
@@ -78,6 +88,39 @@ impl Display for ListConstraintError {
 		}
 	}
 }
+
+
+
+/// Custom implementation of fuzzy search, returns the index of the closest match
+pub fn custom_fuzzy_search(pattern: &str, items: &[String]) -> usize {
+	let (mut best_score, mut best_index) = (custom_fuzzy_match(pattern, &items[0]), 0);
+	for (i, item) in items.iter().enumerate().skip(1) {
+		let score = custom_fuzzy_match(pattern, item);
+		if score > best_score {
+			best_score = score;
+			best_index = i;
+		}
+	}
+	best_index
+}
+
+/// Custom implementation of fuzzy match. Not efficient at all, but gives good results
+pub fn custom_fuzzy_match(pattern: &str, item: &str) -> usize {
+	let (longer, shorter) = if pattern.len() > item.len() {(pattern, item)} else {(item, pattern)};
+	let mut score = 0;
+	for offset in 0..= longer.len() - shorter.len() {
+		let longer_chars = longer.chars().skip(offset);
+		let shorter_chars = shorter.chars();
+		for (longer_char, shorter_char) in longer_chars.zip(shorter_chars) {
+			if longer_char == shorter_char {
+				score += 1;
+			}
+		}
+	}
+	score
+}
+
+
 
 
 
