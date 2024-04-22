@@ -2,6 +2,8 @@ use smart_read::prelude::*;
 
 fn main() {
 	
+	read!(&["Lanercoast", "Windrip", "Redwick Bush", "Brickelwhyte", "Sirencester", "Conriston", "Inverness", "Norwich", "Elinmylly", "Murlayfield"]);
+	
 	
 	
 	println!("\n==== `read!()` ====");

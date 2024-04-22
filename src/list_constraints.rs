@@ -28,6 +28,7 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], prompt: O
 				println!("{choice}");
 			}
 		}
+		println!();
 	};
 	
 	if choices.len() == 1 {
@@ -36,7 +37,7 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], prompt: O
 		println!("Automatically choosing {} since it is the only option", choices[0]);
 		return Ok((0, choices[0].clone()));
 	}
-		
+	
 	print_prompt();
 	let mut input = read_stdin()?;
 	
@@ -106,18 +107,23 @@ pub fn custom_fuzzy_search(pattern: &str, items: &[String]) -> usize {
 
 /// Custom implementation of fuzzy match. Not efficient at all, but gives good results
 pub fn custom_fuzzy_match(pattern: &str, item: &str) -> usize {
-	let (longer, shorter) = if pattern.len() > item.len() {(pattern, item)} else {(item, pattern)};
-	let mut score = 0;
-	for offset in 0..= longer.len() - shorter.len() {
-		let longer_chars = longer.chars().skip(offset);
-		let shorter_chars = shorter.chars();
-		for (longer_char, shorter_char) in longer_chars.zip(shorter_chars) {
-			if longer_char == shorter_char {
-				score += 1;
+	let mut best_score = 0;
+	let offset_start = pattern.len() as isize * -1 + 1;
+	let offset_end = item.len() as isize - 1;
+	for offset in offset_start..=offset_end {
+		let item_slice = &item[offset.max(0) as usize .. (offset + pattern.len() as isize).min(item.len() as isize) as usize];
+		let pattern_slice = &pattern[(offset * -1).max(0) as usize .. (item.len() as isize - offset).min(pattern.len() as isize) as usize];
+		let mut slice_score = 0;
+		for (item_char, pattern_char) in item_slice.chars().zip(pattern_slice.chars()) {
+			if item_char.eq_ignore_ascii_case(&pattern_char) {
+				slice_score += 3;
+			} else {
+				slice_score -= 1;
 			}
 		}
+		best_score = (best_score as isize).max(slice_score) as usize;
 	}
-	score
+	best_score
 }
 
 
