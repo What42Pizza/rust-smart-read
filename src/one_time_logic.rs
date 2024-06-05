@@ -16,6 +16,9 @@ impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F> {
 			
 			print!("{prompt}");
 			let input = read_stdin()?;
+			if input.is_empty() && let Some(default) = default {
+				return Ok(default);
+			}
 			match (self.0)(&input) {
 				Ok(_) => return Ok(input),
 				Err(error_message) => {
@@ -44,6 +47,9 @@ impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValida
 			
 			print!("{prompt}");
 			let input = read_stdin()?;
+			if input.is_empty() && let Some(default) = default {
+				return Ok(default);
+			}
 			match (self.0)(input) {
 				Ok(output) => return Ok(output),
 				Err(error_message) => {
