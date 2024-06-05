@@ -9,7 +9,7 @@
 //! <br>
 //! <br>
 //! 
-//! ## Types that implement TryRead (basically, all default functionality):
+//! ## Types that implement TryRead &nbsp; (basically, a list of all default functionality):
 //! 
 //! <br>
 //! 
@@ -36,7 +36,7 @@
 //! 
 //! ```
 //! impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F>
-//! impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<O, F>
+//! impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<F, O>
 //! ```
 //! 
 //! <br>
@@ -82,30 +82,41 @@
 //! <br>
 //! <br>
 //! 
-//! # Extra Functionality
+//! # Macro Syntax
 //! 
-//! In addition to the type of input, data can be added at the start of `read!()` / `prompt!()`. In order, these additions are:
-//! 
-//! <br>
-//! 
-//! ### Prompt Message
-//! 
-//! `prompt_value;` (only available with prompt!())
+//! There are three items that can be included in a macro call (all optional): the prompt message, the default value, and the input type.
 //! 
 //! <br>
 //! 
-//! ### Default Value
+//! The prompt message is simply an expression, followed by `;` if there's more afterwards. This is required when using the prompt macro, and not available with the read macro.
 //! 
-//! `[default_value]`
+//! Examples: &nbsp; `prompt!("Enter any string: ")`, &nbsp; `prompt!(messages[i]; YesNoInput)`
+//! 
+//! <br>
+//! 
+//! The default value comes after the prompt message (if given), and must be enclosed in `[]`.
+//! 
+//! Examples: &nbsp; `read!([1] 0..10)`, &nbsp; `prompt!("Confirm action? "; [true] YesNoInput)`
 //! 
 //! <br>
 //! 
-//! ##### Example: &nbsp; `prompt!("Enter a color: "; ["red"] = "red", "green", "blue")`
+//! The input type is a value that determines how the input is read. You could give a range to read a number within a range, or a `UsizeInput` to read an int, or whatever else implements `TryRead` from this crate (fun fact, leaving this blank will use the impl for `()`).
+//! 
+//! Examples: &nbsp; `read!()`, &nbsp; `prompt!("Enter a color: "; ["red"] &["red", "green", "blue"])`, &nbsp; `read!(ExampleStruct {arg: 42})`
 //! 
 //! <br>
 //! <br>
 //! 
-//! If you have ideas for more functionality (including things that you've found to be useful for yourself), feel free to open an issue
+//! # Feature-Specific Syntax
+//! 
+//! Currently, only one feature has custom syntax, which is the implementation for slices. Instead of `read!(&[item1, item2, ...])`, you can write: `read!(= item1, item2, ...)`
+//! 
+//! And of course, you can combine this with any other piece of syntax: &nbsp; `prompt!("Enter a color: "; ["red"] = "red", "green", "blue")`
+//! 
+//! <br>
+//! <br>
+//! 
+//! If you have ideas for more functionality (including things that you've found to be useful for yourself), feel free to open an issue / pull request
 //! 
 //! <br>
 //! <br>
@@ -113,7 +124,7 @@
 
 
 #![feature(let_chains)]
-#![allow(clippy::tabs_in_doc_comments)]
+#![allow(clippy::tabs_in_doc_comments, clippy::neg_multiply)]
 #![warn(missing_docs, clippy::todo, clippy::unwrap_used, clippy::panic, clippy::expect_used)]
 
 use std::{error::Error, fmt::{Debug, Display}, io::Write};

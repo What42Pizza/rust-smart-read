@@ -106,22 +106,23 @@ pub fn custom_fuzzy_search(pattern: &str, items: &[String]) -> usize {
 }
 
 /// Custom implementation of fuzzy match. Not efficient at all, but gives good results
-pub fn custom_fuzzy_match(pattern: &str, item: &str) -> usize {
-	let mut best_score = 0;
+pub fn custom_fuzzy_match(pattern: &str, item: &str) -> f32 {
+	let mut best_score = 0.0f32;
 	let offset_start = pattern.len() as isize * -1 + 1;
 	let offset_end = item.len() as isize - 1;
 	for offset in offset_start..=offset_end {
 		let item_slice = &item[offset.max(0) as usize .. (offset + pattern.len() as isize).min(item.len() as isize) as usize];
 		let pattern_slice = &pattern[(offset * -1).max(0) as usize .. (item.len() as isize - offset).min(pattern.len() as isize) as usize];
-		let mut slice_score = 0;
+		let mut slice_score = 0.0f32;
 		for (item_char, pattern_char) in item_slice.chars().zip(pattern_slice.chars()) {
 			if item_char.eq_ignore_ascii_case(&pattern_char) {
-				slice_score += 3;
+				slice_score += 3.;
 			} else {
-				slice_score -= 1;
+				slice_score -= 1.;
 			}
 		}
-		best_score = (best_score as isize).max(slice_score) as usize;
+		slice_score *= 1. - offset as f32 / item.len() as f32 * 0.5; // give higher value to earlier matches, best weight is at offset = 0
+		best_score = best_score.max(slice_score);
 	}
 	best_score
 }
