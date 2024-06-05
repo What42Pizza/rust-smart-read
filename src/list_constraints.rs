@@ -6,7 +6,7 @@ use std::collections::{LinkedList, VecDeque};
 
 
 /// Internal utility function
-pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, T)> {
+pub fn read_list_input_enumerated<T>(choices: &[InputChoice<T>], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, T)> {
 	if choices.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
 	let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
@@ -69,8 +69,8 @@ pub fn read_input_option_enumerated<T: Display + Clone>(choices: &[T], prompt: O
 }
 
 /// Internal utility function
-pub fn read_input_option<T: Display + Clone>(choices: &[T], prompt: Option<String>, default: Option<usize>) -> BoxResult<T> {
-	read_input_option_enumerated(choices, prompt, default).map(|(_index, output)| output)
+pub fn read_list_input<T: Display + Clone>(choices: &[T], prompt: Option<String>, default: Option<usize>) -> BoxResult<T> {
+	read_list_input_enumerated(choices, prompt, default).map(|(_index, output)| output)
 }
 
 /// Error type
@@ -152,17 +152,32 @@ pub fn custom_fuzzy_match(pattern: &str, item: &str) -> usize {
 /// let OptionWithData {name: _, data: index_to_remove} = prompt!("Choose a color to remove: "; choosable_colors);
 /// colors.remove(index_to_remove);
 /// ```
-#[derive(Clone, PartialEq)]
-pub struct OptionWithData<T: Clone + PartialEq> {
-	/// What's shown to the user
+pub struct InputChoice<T> {
+	/// What's shown to the user (minus the choose_name)
 	pub display_name: String,
+	/// What the user needs to enter to choose this option
+	pub choose_name: Option<String>,
 	/// What isn't shown to the user
 	pub data: T,
 }
 
-impl<T: Clone + PartialEq> Display for OptionWithData<T> {
+impl<T> InputChoice<T> {
+	pub fn get_display_string(&self, is_default: bool) -> String {
+		if let Some(choose_name) = &self.choose_name {
+			
+		} else {
+			
+		}
+	}
+}
+
+impl<T> Display for InputChoice<T> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.display_name)
+		if let Some(choose_name) = &self.choose_name {
+			write!(f, "{}: {}", choose_name, self.display_name)
+		} else {
+			write!(f, "{}", self.display_name)
+		}
 	}
 }
 
@@ -177,7 +192,7 @@ impl<T: Display + Clone + PartialEq> TryRead for &[T] {
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == default.as_ref())
 			.map(|v| v.0);
-		read_input_option(self, prompt, default)
+		read_list_input(self, prompt, default)
 	}
 }
 
@@ -189,7 +204,7 @@ impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for &[T; LEN] {
 			.find(|v| Some(v.1) == default.as_ref())
 			.map(|v| v.0);
 		#[allow(clippy::explicit_auto_deref)] // false positive
-		read_input_option(*self, prompt, default)
+		read_list_input(*self, prompt, default)
 	}
 }
 
@@ -200,7 +215,7 @@ impl<T: Display + Clone + PartialEq> TryRead for Vec<T> {
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == default.as_ref())
 			.map(|v| v.0);
-		read_input_option(self, prompt, default)
+		read_list_input(self, prompt, default)
 	}
 }
 
@@ -211,7 +226,7 @@ impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T> {
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == default.as_ref())
 			.map(|v| v.0);
-		read_input_option(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
+		read_list_input(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
 	}
 }
 
@@ -222,7 +237,7 @@ impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
 			self.iter().enumerate()
 			.find(|v| Some(v.1) == default.as_ref())
 			.map(|v| v.0);
-		read_input_option(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
+		read_list_input(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
 	}
 }
 
@@ -239,7 +254,7 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {
 		} else {
 			None
 		};
-		read_input_option_enumerated(self.0, prompt, default_index)
+		read_list_input_enumerated(self.0, prompt, default_index)
 	}
 }
 
@@ -251,7 +266,7 @@ impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for EnumerateInpu
 		} else {
 			None
 		};
-		read_input_option_enumerated(self.0, prompt, default_index)
+		read_list_input_enumerated(self.0, prompt, default_index)
 	}
 }
 
@@ -263,7 +278,7 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>> {
 		} else {
 			None
 		};
-		read_input_option_enumerated(&self.0, prompt, default_index)
+		read_list_input_enumerated(&self.0, prompt, default_index)
 	}
 }
 
@@ -276,7 +291,7 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>> {
 			None
 		};
 		let slice = self.0.iter().cloned().collect::<Vec<_>>();
-		read_input_option_enumerated(&slice, prompt, default_index)
+		read_list_input_enumerated(&slice, prompt, default_index)
 	}
 }
 
@@ -289,6 +304,6 @@ impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>> {
 			None
 		};
 		let slice = self.0.iter().cloned().collect::<Vec<_>>();
-		read_input_option_enumerated(&slice, prompt, default_index)
+		read_list_input_enumerated(&slice, prompt, default_index)
 	}
 }
