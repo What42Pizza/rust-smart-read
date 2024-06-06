@@ -44,10 +44,10 @@ fn main() {
 	
 	
 	println!("\n==== `read!(&[\"red\", \"green\", \"blue\"])` ====");
-	let input = read!(&["red", "green", "blue"]); // choose from a list of options
+	let input = read!(&["red", "green", "blue"]).1; // choose from a list of options
 	println!("You entered: \"{input}\"");
 	println!("\n==== `read!(= \"red\", \"green\", \"blue\")` ====");
-	let input = read!(= "red", "green", "blue"); // some inputs have special syntax
+	let input = read!(= "red", "green", "blue").1; // some inputs have special syntax
 	println!("You entered: \"{input}\"");
 	
 	
@@ -61,10 +61,14 @@ fn main() {
 	}));
 	println!("You entered: \"{input}\"");
 	
+	//let options = [
+	//	InputOption
+	//];
 	
 	
-	println!("\n==== `prompt!(\"Enter an int: \"; [1] = 1, 2, 3, 4, 5)` ====");
-	let input = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5); // combine any features
+	
+	println!("\n==== `prompt!(\"Enter an int: \"; [1usize] = 1, 2, 3, 4, 5)` ====");
+	let input = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5).1; // combine any features
 	println!("You entered: \"{input}\"");
 	
 	

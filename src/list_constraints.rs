@@ -3,75 +3,67 @@ use std::collections::{LinkedList, VecDeque};
 
 
 
-
-
-/// Internal utility function
-pub fn read_list_input_enumerated<T>(choices: &[InputChoice<T>], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, T)> {
-	if choices.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
-	
-	let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
-	let choice_strings =
-		choices.iter()
-		.map(ToString::to_string)
-		.collect::<Vec<_>>();
-	
-	let print_prompt = || {
-		println!("{prompt}");
-		for (i, choice) in choice_strings.iter().enumerate() {
-			if let Some(default) = default {
-				if i == default {
-					println!("[{choice}]");
-				} else {
-					println!(" {choice}");
-				}
-			} else {
-				println!("{choice}");
+impl<'a, Data: 'a> TryRead<'a> for Vec<InputOption<Data>> {
+	type Output = (usize, &'a InputOption<Data>);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		if self.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
+		
+		let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
+		let option_strings =
+			self.iter().enumerate()
+			.map(|(i, option)| {
+				option.get_display_string(default.map(|default| i == default))
+			})
+			.collect::<Vec<_>>();
+		
+		let print_prompt = || {
+			println!("{prompt}");
+			for option in option_strings.iter() {
+				println!("{option}");
 			}
+			println!();
+		};
+		
+		if self.len() == 1 {
+			print_prompt();
+			println!();
+			println!("Automatically choosing the only option because it is the only option");
+			return Ok((0, &self[0]));
 		}
-		println!();
-	};
-	
-	if choices.len() == 1 {
+		
 		print_prompt();
-		println!();
-		println!("Automatically choosing {} since it is the only option", choices[0]);
-		return Ok((0, choices[0].clone()));
-	}
-	
-	print_prompt();
-	let mut input = read_stdin()?;
-	
-	loop {
-		if input.is_empty() && let Some(default) = default {
-			return Ok((default, choices[default].clone()));
-		}
+		let mut input = read_stdin()?;
 		
-		// find exact match
-		for (i, choice) in choice_strings.iter().enumerate() {
-			if choice.eq_ignore_ascii_case(&input) {
-				return Ok((i, choices[i].clone()));
+		loop {
+			if input.is_empty() && let Some(default) = default {
+				return Ok((default, &self[default]));
 			}
+			
+			// find exact match
+			for (i, option) in option_strings.iter().enumerate() {
+				if option.eq_ignore_ascii_case(&input) {
+					return Ok((i, &self[i]));
+				}
+			}
+			
+			println!();
+			println!("Invalid option.");
+			
+			// try fuzzy match
+			let possible_option_index = custom_fuzzy_search(&input, &option_strings);
+			print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", option_strings[possible_option_index]);
+			let new_input = read_stdin()?;
+			if new_input.is_empty() {
+				return Ok((possible_option_index, &self[possible_option_index]));
+			}
+			input = new_input;
+			
 		}
-		
-		println!();
-		println!("Invalid option.");
-		
-		// try fuzzy match
-		let possible_choice_index = custom_fuzzy_search(&input, &choice_strings);
-		print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", choice_strings[possible_choice_index]);
-		let new_input = read_stdin()?;
-		if new_input.is_empty() {
-			return Ok((possible_choice_index, choices[possible_choice_index].clone()));
-		}
-		input = new_input;
-		
 	}
 }
 
-/// Internal utility function
-pub fn read_list_input<T: Display + Clone>(choices: &[T], prompt: Option<String>, default: Option<usize>) -> BoxResult<T> {
-	read_list_input_enumerated(choices, prompt, default).map(|(_index, output)| output)
-}
+
 
 /// Error type
 #[derive(Debug)]
@@ -153,31 +145,25 @@ pub fn custom_fuzzy_match(pattern: &str, item: &str) -> f32 {
 /// let OptionWithData {name: _, data: index_to_remove} = prompt!("Choose a color to remove: "; choosable_colors);
 /// colors.remove(index_to_remove);
 /// ```
-pub struct InputChoice<T> {
+pub struct InputOption<Data> {
 	/// What's shown to the user (minus the choose_name)
 	pub display_name: String,
 	/// What the user needs to enter to choose this option
 	pub choose_name: Option<String>,
 	/// What isn't shown to the user
-	pub data: T,
+	pub data: Data,
 }
 
-impl<T> InputChoice<T> {
-	pub fn get_display_string(&self, is_default: bool) -> String {
-		if let Some(choose_name) = &self.choose_name {
-			
-		} else {
-			
-		}
-	}
-}
-
-impl<T> Display for InputChoice<T> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		if let Some(choose_name) = &self.choose_name {
-			write!(f, "{}: {}", choose_name, self.display_name)
-		} else {
-			write!(f, "{}", self.display_name)
+impl<Data> InputOption<Data> {
+	/// Internal function
+	pub fn get_display_string(&self, is_default: Option<bool>) -> String {
+		match (self.choose_name.as_ref(), is_default) {
+			(Some(choose_name), Some(true )) => format!("[{choose_name}]: {}", self.display_name),
+			(Some(choose_name), Some(false)) => format!(" {choose_name}:  {}", self.display_name),
+			(None                      , Some(true )) => format!("[{}]", self.display_name),
+			(None                      , Some(false)) => format!(" {} ", self.display_name),
+			(Some(choose_name), None       ) => format!("{choose_name}: {}", self.display_name),
+			(None                      , None       ) => format!("{}", self.display_name),
 		}
 	}
 }
@@ -186,125 +172,92 @@ impl<T> Display for InputChoice<T> {
 
 
 
-impl<T: Display + Clone + PartialEq> TryRead for &[T] {
-	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default =
-			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
-			.map(|v| v.0);
-		read_list_input(self, prompt, default)
+impl<'a, T: Display + 'a> TryRead<'a> for &'a [T] {
+	type Output = (usize, &'a T);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let options = self.into_iter()
+			.map(|option| {
+				InputOption {
+					display_name: option.to_string(),
+					choose_name: None,
+					data: (),
+				}
+			})
+			.collect::<Vec<_>>();
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		Ok((chosen_index, &self[chosen_index]))
 	}
 }
 
-impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for &[T; LEN] {
-	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default =
-			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
-			.map(|v| v.0);
-		#[allow(clippy::explicit_auto_deref)] // false positive
-		read_list_input(*self, prompt, default)
+impl<'a, T: Display + 'a, const LEN: usize> TryRead<'a> for &[T; LEN] {
+	type Output = (usize, &'a T);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let options = self.into_iter()
+			.map(|option| {
+				InputOption {
+					display_name: option.to_string(),
+					choose_name: None,
+					data: (),
+				}
+			})
+			.collect::<Vec<_>>();
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		Ok((chosen_index, &self[chosen_index]))
 	}
 }
 
-impl<T: Display + Clone + PartialEq> TryRead for Vec<T> {
-	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default =
-			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
-			.map(|v| v.0);
-		read_list_input(self, prompt, default)
+impl<'a, T: Display + 'a> TryRead<'a> for Vec<T> {
+	type Output = (usize, &'a T);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let options = self.into_iter()
+			.map(|option| {
+				InputOption {
+					display_name: option.to_string(),
+					choose_name: None,
+					data: (),
+				}
+			})
+			.collect::<Vec<_>>();
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		Ok((chosen_index, &self[chosen_index]))
 	}
 }
 
-impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T> {
-	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default =
-			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
-			.map(|v| v.0);
-		read_list_input(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
+impl<'a, T: Display + 'a> TryRead<'a> for VecDeque<T> {
+	type Output = (usize, &'a T);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let options = self.into_iter()
+			.map(|option| {
+				InputOption {
+					display_name: option.to_string(),
+					choose_name: None,
+					data: (),
+				}
+			})
+			.collect::<Vec<_>>();
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		Ok((chosen_index, &self[chosen_index]))
 	}
 }
 
-impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T> {
-	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default =
-			self.iter().enumerate()
-			.find(|v| Some(v.1) == default.as_ref())
-			.map(|v| v.0);
-		read_list_input(&self.iter().cloned().collect::<Vec<_>>(), prompt, default)
-	}
-}
-
-
-
-/// Returns the index of the chosen item along with the item. &nbsp; <b> NOTE </b> : If you filter the inputs before feeding them into EnumerateInput, the indices returns won't match the indices of the initial input. In this case, you might want to use OptionWithData instead
-pub struct EnumerateInput<T: TryRead> (pub T);
-
-impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]> {
-	type Output = (usize, T);
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default_index = if let Some((index, _item)) = &default {
-			Some(*index)
-		} else {
-			None
-		};
-		read_list_input_enumerated(self.0, prompt, default_index)
-	}
-}
-
-impl<T: Display + Clone + PartialEq, const LEN: usize> TryRead for EnumerateInput<&[T; LEN]> {
-	type Output = (usize, T);
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default_index = if let Some((index, _item)) = &default {
-			Some(*index)
-		} else {
-			None
-		};
-		read_list_input_enumerated(self.0, prompt, default_index)
-	}
-}
-
-impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>> {
-	type Output = (usize, T);
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default_index = if let Some((index, _item)) = &default {
-			Some(*index)
-		} else {
-			None
-		};
-		read_list_input_enumerated(&self.0, prompt, default_index)
-	}
-}
-
-impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>> {
-	type Output = (usize, T);
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default_index = if let Some((index, _item)) = &default {
-			Some(*index)
-		} else {
-			None
-		};
-		let slice = self.0.iter().cloned().collect::<Vec<_>>();
-		read_list_input_enumerated(&slice, prompt, default_index)
-	}
-}
-
-impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>> {
-	type Output = (usize, T);
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		let default_index = if let Some((index, _item)) = &default {
-			Some(*index)
-		} else {
-			None
-		};
-		let slice = self.0.iter().cloned().collect::<Vec<_>>();
-		read_list_input_enumerated(&slice, prompt, default_index)
+impl<'a, T: Display + 'a> TryRead<'a> for LinkedList<T> {
+	type Output = (usize, &'a T);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let options = self.into_iter()
+			.map(|option| {
+				InputOption {
+					display_name: option.to_string(),
+					choose_name: None,
+					data: (),
+				}
+			})
+			.collect::<Vec<_>>();
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		Ok((chosen_index, self.iter().nth(chosen_index).unwrap()))
 	}
 }

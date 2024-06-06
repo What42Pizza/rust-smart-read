@@ -15,9 +15,10 @@ fn main() {
 
 
 
-impl TryRead for PasswordInput {
+impl<'a> TryRead<'a> for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> smart_read::BoxResult<Self::Output> {
+	type Default = ();
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
 		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)

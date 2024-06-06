@@ -44,13 +44,14 @@ where
 
 
 
-impl<T> TryRead for Range<T>
+impl<'a, T> TryRead<'a> for Range<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+	type Default = T;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &Range<impl Display>) -> String {
 			format!("[{:.1}, {:.1})", range.start, range.end)
 		}
@@ -58,13 +59,14 @@ where
 	}
 }
 
-impl<T> TryRead for RangeInclusive<T>
+impl<'a, T> TryRead<'a> for RangeInclusive<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+	type Default = T;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeInclusive<impl Display>) -> String {
 			format!("[{:.1}, {:.1}]", range.start(), range.end())
 		}
@@ -72,13 +74,14 @@ where
 	}
 }
 
-impl<T> TryRead for RangeTo<T>
+impl<'a, T> TryRead<'a> for RangeTo<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+	type Default = T;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeTo<impl Display>) -> String {
 			format!(".., {:.1})", range.end)
 		}
@@ -86,13 +89,14 @@ where
 	}
 }
 
-impl<T> TryRead for RangeFrom<T>
+impl<'a, T> TryRead<'a> for RangeFrom<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+	type Default = T;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeFrom<impl Display>) -> String {
 			format!("[{:.1}, ..", range.start)
 		}
@@ -100,13 +104,14 @@ where
 	}
 }
 
-impl<T> TryRead for RangeToInclusive<T>
+impl<'a, T> TryRead<'a> for RangeToInclusive<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	<T as FromStr>::Err: Display,
 {
 	type Output = T;
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
+	type Default = T;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
 		fn format(range: &RangeToInclusive<impl Display>) -> String {
 			format!(".., {:.1}]", range.end)
 		}

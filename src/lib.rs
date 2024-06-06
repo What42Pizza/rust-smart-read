@@ -45,23 +45,16 @@
 //! 
 //! These allow you to specify which inputs are allowed. Example: `read!(&["a", "b", "c"])`
 //! 
-//! If the choices are wrapped in EnumerateInput, it also returns the index of the chosen option
-//! 
 //! Special syntax: `read!(= 1, 2, 3)`
 //! 
 //! Implemented types:
 //! ```
+//! impl<Data> TryRead for Vec<InputOption<Data>>
 //! impl<T: Display + Clone + PartialEq> TryRead for &[T]
 //! impl<T: Display + Clone + PartialEq> TryRead for &[T; _]
 //! impl<T: Display + Clone + PartialEq> TryRead for Vec<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T>
 //! impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T>
-//! // NOTE: If the options are filtered before being fed into smart-read, you should probably use OptionWithData<T>
-//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T]>
-//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<&[T; _]>
-//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<Vec<T>>
-//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<VecDeque<T>>
-//! impl<T: Display + Clone + PartialEq> TryRead for EnumerateInput<LinkedList<T>>
 //! ```
 //! 
 //! <br>
@@ -174,11 +167,9 @@ macro_rules! read {
 #[macro_export]
 macro_rules! try_read {
 	
-	($($args:tt)*) => {|| -> smart_read::BoxResult<_> {
-		use smart_read::TryRead;
-		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
-		tryread_struct.try_read_line(None, default)
-	}()};
+	($($args:tt)*) => {
+		smart_read::run_with_prompt!(None; $($args)*)
+	};
 	
 }
 
@@ -198,47 +189,48 @@ macro_rules! try_prompt {
 	
 	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
 	
-	($prompt:expr; $($args:tt)*) => {|| -> smart_read::BoxResult<_> {
+	($prompt:expr; $($args:tt)*) => {
+		smart_read::run_with_prompt!(Some($prompt.to_string()); $($args)*)
+	};
+	
+}
+
+
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! run_with_prompt {
+	
+	($prompt:expr; [$default:expr] $($args:tt)*) => {
+		smart_read::run_with_prompt_and_default!($prompt; Some($default.into()); $($args)*)
+	};
+	
+	($prompt:expr; $($args:tt)*) => {
+		smart_read::run_with_prompt_and_default!($prompt; None; $($args)*)
+	};
+	
+}
+
+
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! run_with_prompt_and_default {
+	
+	($prompt:expr; $default:expr;) => {{
 		use smart_read::TryRead;
-		let (default, (tryread_struct)) = smart_read::parse_default_arg!($($args)*);
-		tryread_struct.try_read_line(Some($prompt.to_string()), default)
-	}()};
+		().try_read_line($prompt, $default)
+	}};
 	
-}
-
-
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parse_default_arg {
+	($prompt:expr; $default:expr; = $($option:expr),*) => {{
+		use smart_read::TryRead;
+		(&[$($option,)*]).try_read_line($prompt, $default)
+	}};
 	
-	([$default:expr] $($args:tt)*) => {
-		(Some($default.into()), smart_read::parse_final_args!($($args)*))
-	};
-	
-	($($args:tt)*) => {
-		(None, smart_read::parse_final_args!($($args)*))
-	};
-	
-}
-
-
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! parse_final_args {
-	
-	() => {
-		()
-	};
-	
-	(= $($choice:expr),*) => {
-		vec!($($choice,)*)
-	};
-	
-	($tryread_struct:expr) => {
-		$tryread_struct
-	}
+	($prompt:expr; $default:expr; $tryread_struct:expr) => {{
+		use smart_read::TryRead;
+		$tryread_struct.try_read_line($prompt, $default)
+	}};
 	
 }
 
@@ -256,11 +248,13 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
-pub trait TryRead {
-	/// Defines the output of `read` and `prompt` macros
+pub trait TryRead<'a> {
+	/// Defines the output type of `read` and `prompt` macros
 	type Output;
+	/// Defines the output type of the default input
+	type Default;
 	/// This is what's called by the `read` and `prompt` macros
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output>;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output>;
 }
 
 
