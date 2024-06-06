@@ -50,6 +50,15 @@ fn main() {
 	let input = read!(= "red", "green", "blue").1; // some inputs have special syntax
 	println!("You entered: \"{input}\"");
 	
+	println!("\n==== `read!(&[InputOption::new(...), ...])` ====");
+	let options = &[
+		InputOption::new("red", Some("1"), ()),
+		InputOption::new("green", Some("2"), ()),
+		InputOption::new("blue", Some("3"), ()),
+	];
+	let input = read!(options);
+	println!("You entered: index {}, \"{}\"", input.0, input.1.display_name);
+	
 	
 	
 	println!("\n==== `prompt!(\"Enter an even int: \"; TransformValidate(...));` ====");
@@ -60,10 +69,6 @@ fn main() {
 		Ok(x)
 	}));
 	println!("You entered: \"{input}\"");
-	
-	//let options = [
-	//	InputOption
-	//];
 	
 	
 	

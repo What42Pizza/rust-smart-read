@@ -3,63 +3,83 @@ use std::collections::{LinkedList, VecDeque};
 
 
 
-impl<'a, Data: 'a> TryRead<'a> for Vec<InputOption<Data>> {
+fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, &'a InputOption<Data>)> {
+	if input_options.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
+	
+	let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
+	let (display_strings, choose_strings) =
+		input_options.iter().enumerate()
+		.map(|(i, option)| {
+			let display_string = option.get_display_string(default.map(|default| i == default));
+			let choose_string = option.choose_name.as_ref().unwrap_or(&option.display_name);
+			(display_string, choose_string)
+		})
+		.collect::<(Vec<_>, Vec<_>)>();
+	
+	let print_prompt = || {
+		println!("{prompt}");
+		for option in display_strings.iter() {
+			println!("{option}");
+		}
+		println!();
+	};
+	
+	if input_options.len() == 1 {
+		print_prompt();
+		println!();
+		println!("Automatically choosing the only option because it is the only option");
+		return Ok((0, &input_options[0]));
+	}
+	
+	print_prompt();
+	let mut input = read_stdin()?;
+	
+	loop {
+		if input.is_empty() && let Some(default) = default {
+			return Ok((default, &input_options[default]));
+		}
+		
+		// find exact match
+		for (i, option) in choose_strings.iter().enumerate() {
+			if option.eq_ignore_ascii_case(&input) {
+				return Ok((i, &input_options[i]));
+			}
+		}
+		
+		println!();
+		println!("Invalid option.");
+		
+		// try fuzzy match
+		if let Some(possible_option_index) = custom_fuzzy_search(&input, &choose_strings) {
+			print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", choose_strings[possible_option_index]);
+			let new_input = read_stdin()?;
+			if new_input.is_empty() {
+				return Ok((possible_option_index, &input_options[possible_option_index]));
+			}
+			input = new_input;
+		} else {
+			print!("Invalid option, please re-enter input: ");
+			input = read_stdin()?;
+		}
+		
+	}
+}
+
+
+
+impl<'a, Data: 'a> TryRead<'a> for &[InputOption<Data>] {
 	type Output = (usize, &'a InputOption<Data>);
 	type Default = usize;
 	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
-		if self.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
-		
-		let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
-		let option_strings =
-			self.iter().enumerate()
-			.map(|(i, option)| {
-				option.get_display_string(default.map(|default| i == default))
-			})
-			.collect::<Vec<_>>();
-		
-		let print_prompt = || {
-			println!("{prompt}");
-			for option in option_strings.iter() {
-				println!("{option}");
-			}
-			println!();
-		};
-		
-		if self.len() == 1 {
-			print_prompt();
-			println!();
-			println!("Automatically choosing the only option because it is the only option");
-			return Ok((0, &self[0]));
-		}
-		
-		print_prompt();
-		let mut input = read_stdin()?;
-		
-		loop {
-			if input.is_empty() && let Some(default) = default {
-				return Ok((default, &self[default]));
-			}
-			
-			// find exact match
-			for (i, option) in option_strings.iter().enumerate() {
-				if option.eq_ignore_ascii_case(&input) {
-					return Ok((i, &self[i]));
-				}
-			}
-			
-			println!();
-			println!("Invalid option.");
-			
-			// try fuzzy match
-			let possible_option_index = custom_fuzzy_search(&input, &option_strings);
-			print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", option_strings[possible_option_index]);
-			let new_input = read_stdin()?;
-			if new_input.is_empty() {
-				return Ok((possible_option_index, &self[possible_option_index]));
-			}
-			input = new_input;
-			
-		}
+		read_list(*self, prompt, default)
+	}
+}
+
+impl<'a, Data: 'a, const LEN: usize> TryRead<'a> for &[InputOption<Data>; LEN] {
+	type Output = (usize, &'a InputOption<Data>);
+	type Default = usize;
+	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		read_list(*self, prompt, default)
 	}
 }
 
@@ -85,7 +105,7 @@ impl Display for ListConstraintError {
 
 
 /// Custom implementation of fuzzy search, returns the index of the closest match
-pub fn custom_fuzzy_search(pattern: &str, items: &[String]) -> usize {
+pub fn custom_fuzzy_search(pattern: &str, items: &[&String]) -> Option<usize> {
 	let (mut best_score, mut best_index) = (custom_fuzzy_match(pattern, &items[0]), 0);
 	for (i, item) in items.iter().enumerate().skip(1) {
 		let score = custom_fuzzy_match(pattern, item);
@@ -94,7 +114,11 @@ pub fn custom_fuzzy_search(pattern: &str, items: &[String]) -> usize {
 			best_index = i;
 		}
 	}
-	best_index
+	if best_score > 0.0 {
+		Some(best_index)
+	} else {
+		None
+	}
 }
 
 /// Custom implementation of fuzzy match. Not efficient at all, but gives good results
@@ -155,6 +179,14 @@ pub struct InputOption<Data> {
 }
 
 impl<Data> InputOption<Data> {
+	/// Basic initializer
+	pub fn new(display: impl Into<String>, choose: Option<impl Into<String>>, data: Data) -> Self {
+		Self {
+			display_name: display.into(),
+			choose_name: choose.map(|v| v.into()),
+			data,
+		}
+	}
 	/// Internal function
 	pub fn get_display_string(&self, is_default: Option<bool>) -> String {
 		match (self.choose_name.as_ref(), is_default) {
@@ -185,7 +217,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for &'a [T] {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = options.try_read_line(prompt, default)?.0;
+		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
@@ -203,7 +235,7 @@ impl<'a, T: Display + 'a, const LEN: usize> TryRead<'a> for &[T; LEN] {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = options.try_read_line(prompt, default)?.0;
+		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
@@ -221,7 +253,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for Vec<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = options.try_read_line(prompt, default)?.0;
+		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
@@ -239,7 +271,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for VecDeque<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = options.try_read_line(prompt, default)?.0;
+		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
@@ -257,7 +289,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for LinkedList<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = options.try_read_line(prompt, default)?.0;
+		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, self.iter().nth(chosen_index).unwrap()))
 	}
 }
