@@ -50,11 +50,11 @@
 //! Implemented types:
 //! ```
 //! impl<Data> TryRead for Vec<InputOption<Data>>
-//! impl<T: Display + Clone + PartialEq> TryRead for &[T]
-//! impl<T: Display + Clone + PartialEq> TryRead for &[T; _]
-//! impl<T: Display + Clone + PartialEq> TryRead for Vec<T>
-//! impl<T: Display + Clone + PartialEq> TryRead for VecDeque<T>
-//! impl<T: Display + Clone + PartialEq> TryRead for LinkedList<T>
+//! impl<T: Display> TryRead for &[T]
+//! impl<T: Display> TryRead for &[T; _]
+//! impl<T: Display> TryRead for Vec<T>
+//! impl<T: Display> TryRead for VecDeque<T>
+//! impl<T: Display> TryRead for LinkedList<T>
 //! ```
 //! 
 //! <br>

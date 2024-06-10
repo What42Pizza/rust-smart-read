@@ -52,9 +52,9 @@ fn main() {
 	
 	println!("\n==== `read!(&[InputOption::new(...), ...])` ====");
 	let options = &[
-		InputOption::new("red", Some("1"), ()),
-		InputOption::new("green", Some("2"), ()),
-		InputOption::new("blue", Some("3"), ()),
+		InputOption::new("red", vec!("1", "r"), ()),
+		InputOption::new("green", vec!("2", "g"), ()),
+		InputOption::new("blue", vec!("3", "b"), ()),
 	];
 	let input = read!(options);
 	println!("You entered: index {}, \"{}\"", input.0, input.1.display_name);

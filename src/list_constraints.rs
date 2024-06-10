@@ -6,16 +6,28 @@ use std::collections::{LinkedList, VecDeque};
 fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, &'a InputOption<Data>)> {
 	if input_options.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
+	// get prompt data
 	let prompt = prompt.unwrap_or(String::from("Enter one of the following:"));
-	let (display_strings, choose_strings) =
+	let display_strings =
 		input_options.iter().enumerate()
 		.map(|(i, option)| {
-			let display_string = option.get_display_string(default.map(|default| i == default));
-			let choose_string = option.choose_name.as_ref().unwrap_or(&option.display_name);
-			(display_string, choose_string)
+			option.get_display_string(default.map(|default| i == default))
 		})
-		.collect::<(Vec<_>, Vec<_>)>();
+		.collect::<Vec<_>>();
+	let (mut all_choose_strings, mut choose_name_mappings) = (vec!(), vec!());
+	for (i, option) in input_options.iter().enumerate() {
+		if option.choose_names.is_empty() {
+			all_choose_strings.push(&option.display_name);
+			choose_name_mappings.push(i);
+		} else {
+			for choose_name in &option.choose_names {
+				all_choose_strings.push(choose_name);
+				choose_name_mappings.push(i);
+			}
+		}
+	}
 	
+	// misc work
 	let print_prompt = || {
 		println!("{prompt}");
 		for option in display_strings.iter() {
@@ -27,22 +39,24 @@ fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Optio
 	if input_options.len() == 1 {
 		print_prompt();
 		println!();
-		println!("Automatically choosing the only option because it is the only option");
+		println!("Automatically choosing the first option because it is the only option");
 		return Ok((0, &input_options[0]));
 	}
 	
 	print_prompt();
 	let mut input = read_stdin()?;
 	
+	// read input
 	loop {
 		if input.is_empty() && let Some(default) = default {
 			return Ok((default, &input_options[default]));
 		}
 		
 		// find exact match
-		for (i, option) in choose_strings.iter().enumerate() {
+		for (i, option) in all_choose_strings.iter().enumerate() {
 			if option.eq_ignore_ascii_case(&input) {
-				return Ok((i, &input_options[i]));
+				let chosen_index = choose_name_mappings[i];
+				return Ok((chosen_index, &input_options[chosen_index]));
 			}
 		}
 		
@@ -50,11 +64,19 @@ fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Optio
 		println!("Invalid option.");
 		
 		// try fuzzy match
-		if let Some(possible_option_index) = custom_fuzzy_search(&input, &choose_strings) {
-			print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", choose_strings[possible_option_index]);
+		if let Some(possible_choose_string_index) = custom_fuzzy_search(&input, &all_choose_strings) {
+			let possible_option_index = choose_name_mappings[possible_choose_string_index];
+			let possible_option = &input_options[possible_option_index];
+			let is_hidden_name = possible_option.choose_names.len() > 1 && all_choose_strings[possible_choose_string_index] != &possible_option.choose_names[0];
+			if is_hidden_name {
+				print!("Did you mean to type \"{}\", for option \"{}\"? (enter nothing to confirm, or re-enter input) ", all_choose_strings[possible_choose_string_index], possible_option.display_name);
+			} else {
+				print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", all_choose_strings[possible_choose_string_index]);
+			}
 			let new_input = read_stdin()?;
 			if new_input.is_empty() {
-				return Ok((possible_option_index, &input_options[possible_option_index]));
+				let chosen_index = possible_option_index;
+				return Ok((chosen_index, &input_options[chosen_index]));
 			}
 			input = new_input;
 		} else {
@@ -173,23 +195,23 @@ pub struct InputOption<Data> {
 	/// What's shown to the user (minus the choose_name)
 	pub display_name: String,
 	/// What the user needs to enter to choose this option
-	pub choose_name: Option<String>,
+	pub choose_names: Vec<String>,
 	/// What isn't shown to the user
 	pub data: Data,
 }
 
 impl<Data> InputOption<Data> {
 	/// Basic initializer
-	pub fn new(display: impl Into<String>, choose: Option<impl Into<String>>, data: Data) -> Self {
+	pub fn new(display: impl Into<String>, choose: Vec<impl Into<String>>, data: Data) -> Self {
 		Self {
 			display_name: display.into(),
-			choose_name: choose.map(|v| v.into()),
+			choose_names: choose.into_iter().map(|v| v.into()).collect(),
 			data,
 		}
 	}
 	/// Internal function
 	pub fn get_display_string(&self, is_default: Option<bool>) -> String {
-		match (self.choose_name.as_ref(), is_default) {
+		match (self.choose_names.first(), is_default) {
 			(Some(choose_name), Some(true )) => format!("[{choose_name}]: {}", self.display_name),
 			(Some(choose_name), Some(false)) => format!(" {choose_name}:  {}", self.display_name),
 			(None                      , Some(true )) => format!("[{}]", self.display_name),
@@ -212,7 +234,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for &'a [T] {
 			.map(|option| {
 				InputOption {
 					display_name: option.to_string(),
-					choose_name: None,
+					choose_names: vec!(),
 					data: (),
 				}
 			})
@@ -230,7 +252,7 @@ impl<'a, T: Display + 'a, const LEN: usize> TryRead<'a> for &[T; LEN] {
 			.map(|option| {
 				InputOption {
 					display_name: option.to_string(),
-					choose_name: None,
+					choose_names: vec!(),
 					data: (),
 				}
 			})
@@ -248,7 +270,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for Vec<T> {
 			.map(|option| {
 				InputOption {
 					display_name: option.to_string(),
-					choose_name: None,
+					choose_names: vec!(),
 					data: (),
 				}
 			})
@@ -266,7 +288,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for VecDeque<T> {
 			.map(|option| {
 				InputOption {
 					display_name: option.to_string(),
-					choose_name: None,
+					choose_names: vec!(),
 					data: (),
 				}
 			})
@@ -284,7 +306,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for LinkedList<T> {
 			.map(|option| {
 				InputOption {
 					display_name: option.to_string(),
-					choose_name: None,
+					choose_names: vec!(),
 					data: (),
 				}
 			})
