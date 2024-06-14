@@ -54,6 +54,14 @@ let _ = read!(&["red", "green", "blue"]);
 // some input type have special syntax
 let _ = read!(= "red", "green", "blue");
 
+// choose from a numbered list of options (first option is shown as "1: red", and you can enter "red", "1", or "r" to pick it)
+let options = &[
+	InputOption::new("red", vec!("1", "r"), ()),
+	InputOption::new("green", vec!("2", "g"), ()),
+	InputOption::new("blue", vec!("3", "b"), ()),
+];
+let _ = read!(options);
+
 
 // one-time custom logic
 let _ = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
