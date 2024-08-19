@@ -2,10 +2,10 @@ use crate::*;
 
 
 
-impl<'a> TryRead<'a> for () {
+impl TryRead for () {
 	type Output = String;
-	type Default = &'a str;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	type Default = String;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		match (prompt, &default) {
 			(Some(prompt), Some(default)) => print!("{prompt}(default: {default}) "),
 			(None, Some(default)) => print!("(default: {default}) "),
@@ -26,10 +26,10 @@ impl<'a> TryRead<'a> for () {
 /// Takes an input that isn't empty
 pub struct NonEmptyInput;
 
-impl<'a> TryRead<'a> for NonEmptyInput {
+impl TryRead for NonEmptyInput {
 	type Output = String;
-	type Default = &'a str;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	type Default = String;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or_default();
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -54,10 +54,10 @@ impl<'a> TryRead<'a> for NonEmptyInput {
 /// Takes an input that contains non-whitespace chars
 pub struct NonWhitespaceInput;
 
-impl<'a> TryRead<'a> for NonWhitespaceInput {
+impl TryRead for NonWhitespaceInput {
 	type Output = String;
-	type Default = &'a str;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	type Default = String;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or_default();
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -82,10 +82,10 @@ impl<'a> TryRead<'a> for NonWhitespaceInput {
 /// Allows you to take a bool input
 pub struct BoolInput;
 
-impl<'a> TryRead<'a> for BoolInput {
+impl TryRead for BoolInput {
 	type Output = bool;
 	type Default = bool;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or(String::from("Enter a bool: "));
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -113,10 +113,10 @@ impl<'a> TryRead<'a> for BoolInput {
 /// Allows you to take a bool input
 pub struct YesNoInput;
 
-impl<'a> TryRead<'a> for YesNoInput {
+impl TryRead for YesNoInput {
 	type Output = bool;
 	type Default = bool;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {}) ", if *default {"Yes"} else {"No"});
@@ -143,10 +143,10 @@ impl<'a> TryRead<'a> for YesNoInput {
 
 macro_rules! implement_number_input {
 	($type_name:tt, $type_base:ty, $default_prompt:expr) => {
-		impl<'a> TryRead<'a> for $type_name {
+		impl TryRead for $type_name {
 			type Output = $type_base;
 			type Default = $type_base;
-			fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+			fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
 				let mut prompt = prompt.unwrap_or(String::from($default_prompt));
 				if let Some(default) = default.as_ref() {
 					prompt += &format!("(default: {default}) ");

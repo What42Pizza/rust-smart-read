@@ -220,6 +220,11 @@ macro_rules! run_with_prompt_and_default {
 		().try_read_line($prompt, $default)
 	}};
 	
+	($prompt:expr; $default:expr; = $([$option_bulletin:expr, $option_name:expr, $($option_alt:expr),*], $option_data:expr),*,) => {{
+		use smart_read::TryRead;
+		[$(InputOption::new($option_bulletin, $option_name, vec!($($option_alt),*), $option_data)),*].try_read_line($prompt, $default)
+	}};
+	
 	($prompt:expr; $default:expr; = $($option:expr),*) => {{
 		use smart_read::TryRead;
 		[$($option),*].try_read_line($prompt, $default)
@@ -246,13 +251,13 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 
 /// This is what powers the whole crate. Any struct that implements this can be used with the macros
-pub trait TryRead<'a> {
+pub trait TryRead {
 	/// Defines the output type of `read` and `prompt` macros
 	type Output;
 	/// Defines the output type of the default input
 	type Default;
 	/// This is what's called by the `read` and `prompt` macros
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output>;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output>;
 }
 
 

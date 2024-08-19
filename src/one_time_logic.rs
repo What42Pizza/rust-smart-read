@@ -5,10 +5,10 @@ use crate::*;
 /// Allows you to keep reading until a condition is valid
 pub struct SimpleValidate<F: Fn(&str) -> Result<(), String>>(pub F);
 
-impl<'a, F: Fn(&str) -> Result<(), String>> TryRead<'a> for SimpleValidate<F> {
+impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F> {
 	type Output = String;
-	type Default = &'a str;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	type Default = String;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or_default();
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -37,10 +37,10 @@ impl<'a, F: Fn(&str) -> Result<(), String>> TryRead<'a> for SimpleValidate<F> {
 /// Allows you to keep reading until a transform is valid
 pub struct TransformValidate<F: Fn(String) -> Result<O, String>, O: Display>(pub F);
 
-impl<'a, F: Fn(String) -> Result<O, String>, O: Display + 'a> TryRead<'a> for TransformValidate<F, O> {
+impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<F, O> {
 	type Output = O;
 	type Default = O;
-	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or_default();
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");

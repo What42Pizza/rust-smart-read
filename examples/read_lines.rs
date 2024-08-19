@@ -53,13 +53,20 @@ fn main() {
 	println!("You entered: \"{input}\"");
 	
 	println!("\n==== `read!([InputOption::new(...), ...])` ====");
-	let options = [
-		InputOption::new("red", vec!("1", "r"), ()),
-		InputOption::new("green", vec!("2", "g"), ()),
-		InputOption::new("blue", vec!("3", "b"), ()),
-	];
-	let input = read!(options);
-	println!("You entered: index {}, \"{}\"", input.0, input.1.display_name);
+	let input = read!([
+		InputOption::new("1", "red", vec!("r", "the first color"), ()),
+		InputOption::new("2", "green", vec!("g", "the second color"), ()),
+		InputOption::new("3", "blue", vec!("b", "the third color"), ()),
+	]);
+	println!("You entered: index {}, \"{}\"", input.0, input.1.main_name);
+	
+	println!("\n==== `read!(= ...)` ====");
+	let input = read!([1usize] =
+		["1", "red", "r", "the first color"], (),
+		["2", "green", "g", "the second color"], (),
+		["3", "blue", "b", "the third color"], (),
+	);
+	println!("You entered: index {}, \"{}\"", input.0, input.1.main_name);
 	
 	
 	

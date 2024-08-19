@@ -56,12 +56,18 @@ let input = read!(["red", "green", "blue"]).1;
 let input = read!(= "red", "green", "blue").1;
 
 // choose from options, with each option having multiple valid matches
-let options = [
+let input = read!([
 	InputOption::new("red", vec!("1", "r"), ()), // displayed as "1: red", and so on
 	InputOption::new("green", vec!("2", "g"), ()),
 	InputOption::new("blue", vec!("3", "b"), ()),
-];
-let input = read!(options);
+]);
+
+// same as above, but using special syntax
+let input = read!(=
+	["1", "red", "r"], (),
+	["2", "green", "g"], (),
+	["3", "blue", "b"], (),
+);
 
 
 // one-time custom logic
