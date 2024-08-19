@@ -10,7 +10,7 @@ pub struct Car {
 
 // choose from a list of cars
 fn main() {
-	let options = &[new_car("Red", "Toyota"), new_car("Silver", "Ram")];
+	let options = [new_car("Red", "Toyota"), new_car("Silver", "Ram")];
 	let input = read!(options).1;
 	println!("You chose: {input}");
 }

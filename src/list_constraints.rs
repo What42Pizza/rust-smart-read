@@ -97,11 +97,11 @@ impl<'a, Data: 'a> TryRead<'a> for &[InputOption<Data>] {
 	}
 }
 
-impl<'a, Data: 'a, const LEN: usize> TryRead<'a> for &[InputOption<Data>; LEN] {
+impl<'a, Data: 'a, const LEN: usize> TryRead<'a> for [InputOption<Data>; LEN] {
 	type Output = (usize, &'a InputOption<Data>);
 	type Default = usize;
 	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
-		read_list(*self, prompt, default)
+		read_list(self, prompt, default)
 	}
 }
 
@@ -244,7 +244,7 @@ impl<'a, T: Display + 'a> TryRead<'a> for &'a [T] {
 	}
 }
 
-impl<'a, T: Display + 'a, const LEN: usize> TryRead<'a> for &[T; LEN] {
+impl<'a, T: Display + 'a, const LEN: usize> TryRead<'a> for [T; LEN] {
 	type Output = (usize, &'a T);
 	type Default = usize;
 	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {

@@ -1,5 +1,3 @@
-//! ## Smart-Read
-//! 
 //! Complex but easy ways to read user input
 //! 
 //! <br>
@@ -49,7 +47,7 @@
 //! 
 //! Implemented types:
 //! ```
-//! impl<Data> TryRead for Vec<InputOption<Data>>
+//! impl<Data> TryRead for Vec<InputOption<Data>> // this is the main implementation, the 5 below this ultimately use this impl
 //! impl<T: Display> TryRead for &[T]
 //! impl<T: Display> TryRead for &[T; _]
 //! impl<T: Display> TryRead for Vec<T>
@@ -224,7 +222,7 @@ macro_rules! run_with_prompt_and_default {
 	
 	($prompt:expr; $default:expr; = $($option:expr),*) => {{
 		use smart_read::TryRead;
-		(&[$($option,)*]).try_read_line($prompt, $default)
+		([$($option,)*]).try_read_line($prompt, $default)
 	}};
 	
 	($prompt:expr; $default:expr; $tryread_struct:expr) => {{

@@ -43,15 +43,15 @@ fn main() {
 	
 	
 	
-	println!("\n==== `read!(&[\"red\", \"green\", \"blue\"])` ====");
-	let input = read!(&["red", "green", "blue"]).1; // choose from a list of options
+	println!("\n==== `read!([\"red\", \"green\", \"blue\"])` ====");
+	let input = read!(["red", "green", "blue"]).1; // choose from a list of options
 	println!("You entered: \"{input}\"");
 	println!("\n==== `read!(= \"red\", \"green\", \"blue\")` ====");
 	let input = read!(= "red", "green", "blue").1; // some inputs have special syntax
 	println!("You entered: \"{input}\"");
 	
-	println!("\n==== `read!(&[InputOption::new(...), ...])` ====");
-	let options = &[
+	println!("\n==== `read!([InputOption::new(...), ...])` ====");
+	let options = [
 		InputOption::new("red", vec!("1", "r"), ()),
 		InputOption::new("green", vec!("2", "g"), ()),
 		InputOption::new("blue", vec!("3", "b"), ()),

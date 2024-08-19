@@ -25,54 +25,54 @@ Anything that implements [TryRead](https://docs.rs/smart-read/latest/smart_read/
 ### Basic Usage
 
 ```
+use smart_read::prelude::*;
+
 // read a line of text
-let _ = read!();
+let input = read!();
 
 // prompt a line of text
-let _ = prompt!("Enter a string: ");
+let input = prompt!("Enter a string: ");
 
 // read specific types
-let _ = read!(UsizeInput);
-let _ = read!(BoolInput);
-let _ = read!(NonWhitespaceInput);
-let _ = read!(I32Input);
+let input = read!(UsizeInput);
+let input = read!(BoolInput);
+let input = read!(NonWhitespaceInput);
+let input = read!(I32Input);
 
 // read a number within a range
-let _ = read!(0. ..= 100.);
+let input = read!(0. ..= 100.);
 
 
 // read a bool
-let _ = prompt!("Confirm input: "; YesNoInput);
+let input = prompt!("Confirm input: "; YesNoInput);
 
 // set a default value
-let _ = prompt!("Confirm input: "; [true] YesNoInput);
+let input = prompt!("Confirm input: "; [true] YesNoInput);
 
 
 // choose from a list of options
-let _ = read!(&["red", "green", "blue"]);
+let input = read!(["red", "green", "blue"]).1;
+// some input types have special syntax
+let input = read!(= "red", "green", "blue").1;
 
-// some input type have special syntax
-let _ = read!(= "red", "green", "blue");
-
-// choose from a numbered list of options (first option is shown as "1: red", and you can enter "red", "1", or "r" to pick it)
-let options = &[
+let options = [
 	InputOption::new("red", vec!("1", "r"), ()),
 	InputOption::new("green", vec!("2", "g"), ()),
 	InputOption::new("blue", vec!("3", "b"), ()),
 ];
-let _ = read!(options);
+let input = read!(options);
 
 
 // one-time custom logic
-let _ = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
+let input = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
 	let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input"));};
-	if x % 2 != 0 {return Err(String::from("Input is not even"));}
+	if x % 2 != 0 {return Err(String::from("Input is not even."));}
 	Ok(x)
 }));
 
 
 // combine any features
-let _ = prompt!("Enter an int: "; [1] = 1, 2, 3, 4, 5);
+let input = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5).1;
 ```
 
 <br>
@@ -106,7 +106,8 @@ pub struct Car {
 
 // choose from a list of cars
 fn main() {
-	let input = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	let options = [new_car("Red", "Toyota"), new_car("Silver", "Ram")];
+	let input = read!(options).1;
 	println!("You chose: {input}");
 }
 
@@ -139,11 +140,12 @@ fn main() {
 	println!("You entered: \"{input}\"");
 }
 
-impl TryRead for PasswordInput {
+impl<'a> TryRead<'a> for PasswordInput {
 	type Output = String;
-	fn try_read_line(&self, read_data: TryReadArgs<Self::Output>) -> smart_read::BoxResult<Self::Output> {
-		if read_data.default.is_some() {return DefaultNotAllowedError::new_box_result();}
-		let prompt = read_data.prompt.unwrap_or_else(
+	type Default = ();
+	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
+		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
+		let prompt = prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
 		);
 		loop {
