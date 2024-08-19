@@ -222,7 +222,7 @@ macro_rules! run_with_prompt_and_default {
 	
 	($prompt:expr; $default:expr; = $($option:expr),*) => {{
 		use smart_read::TryRead;
-		([$($option,)*]).try_read_line($prompt, $default)
+		[$($option),*].try_read_line($prompt, $default)
 	}};
 	
 	($prompt:expr; $default:expr; $tryread_struct:expr) => {{

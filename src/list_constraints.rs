@@ -3,7 +3,7 @@ use std::collections::{LinkedList, VecDeque};
 
 
 
-fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<(usize, &'a InputOption<Data>)> {
+fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<usize> {
 	if input_options.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
 	// get prompt data
@@ -40,7 +40,7 @@ fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Optio
 		print_prompt();
 		println!();
 		println!("Automatically choosing the first option because it is the only option");
-		return Ok((0, &input_options[0]));
+		return Ok(0);
 	}
 	
 	print_prompt();
@@ -49,14 +49,14 @@ fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Optio
 	// read input
 	loop {
 		if input.is_empty() && let Some(default) = default {
-			return Ok((default, &input_options[default]));
+			return Ok(default);
 		}
 		
 		// find exact match
 		for (i, option) in all_choose_strings.iter().enumerate() {
 			if option.eq_ignore_ascii_case(&input) {
 				let chosen_index = choose_name_mappings[i];
-				return Ok((chosen_index, &input_options[chosen_index]));
+				return Ok(chosen_index);
 			}
 		}
 		
@@ -76,7 +76,7 @@ fn read_list<'a, Data: 'a>(input_options: &'a [InputOption<Data>], prompt: Optio
 			let new_input = read_stdin()?;
 			if new_input.is_empty() {
 				let chosen_index = possible_option_index;
-				return Ok((chosen_index, &input_options[chosen_index]));
+				return Ok(chosen_index);
 			}
 			input = new_input;
 		} else {
@@ -93,7 +93,8 @@ impl<'a, Data: 'a> TryRead<'a> for &[InputOption<Data>] {
 	type Output = (usize, &'a InputOption<Data>);
 	type Default = usize;
 	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
-		read_list(*self, prompt, default)
+		let index = read_list(*self, prompt, default)?;
+		Ok((index, &self[index]))
 	}
 }
 
@@ -101,7 +102,8 @@ impl<'a, Data: 'a, const LEN: usize> TryRead<'a> for [InputOption<Data>; LEN] {
 	type Output = (usize, &'a InputOption<Data>);
 	type Default = usize;
 	fn try_read_line(&'a self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
-		read_list(self, prompt, default)
+		let index = read_list(self, prompt, default)?;
+		Ok((index, &self[index]))
 	}
 }
 

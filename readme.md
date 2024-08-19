@@ -55,8 +55,9 @@ let input = read!(["red", "green", "blue"]).1;
 // some input types have special syntax
 let input = read!(= "red", "green", "blue").1;
 
+// choose from options, with each option having multiple valid matches
 let options = [
-	InputOption::new("red", vec!("1", "r"), ()),
+	InputOption::new("red", vec!("1", "r"), ()), // displayed as "1: red", and so on
 	InputOption::new("green", vec!("2", "g"), ()),
 	InputOption::new("blue", vec!("3", "b"), ()),
 ];

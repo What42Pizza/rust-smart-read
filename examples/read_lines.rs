@@ -2,7 +2,9 @@ use smart_read::prelude::*;
 
 fn main() {
 	
-	read!(&["Lanercoast", "Windrip", "Redwick Bush", "Brickelwhyte", "Sirencester", "Conriston", "Inverness", "Norwich", "Elinmylly", "Murlayfield"]);
+	println!("\n==== custom fuzzy-search testing ====");
+	let input = read!(["Lanercoast", "Windrip", "Redwick Bush", "Brickelwhyte", "Sirencester", "Conriston", "Inverness", "Norwich", "Elinmylly", "Murlayfield"]).1;
+	println!("You entered: \"{input}\"");
 	
 	
 	
