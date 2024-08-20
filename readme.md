@@ -22,6 +22,10 @@ Anything that implements [TryRead](https://docs.rs/smart-read/latest/smart_read/
 
 <br>
 
+Note: this does contain unsafe code (which I'm new to), if you'd like to review it you can find it [here](https://github.com/What42Pizza/rust-smart-read/blob/main/src/unsafe_utils.rs)
+
+<br>
+
 ### Basic Usage
 
 ```
