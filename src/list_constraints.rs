@@ -1,5 +1,5 @@
 use crate::*;
-use std::{collections::{LinkedList, VecDeque}, mem::MaybeUninit};
+use std::collections::{LinkedList, VecDeque};
 
 
 
@@ -106,10 +106,9 @@ impl<'a, Data> TryRead for &'a [InputOption<Data>] {
 impl<Data, const LEN: usize> TryRead for [InputOption<Data>; LEN] {
 	type Output = (usize, InputOption<Data>);
 	type Default = usize;
-	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let chosen_index = read_list(&self, prompt, default)?;
-		#[allow(invalid_value)]
-		let chosen_item = std::mem::replace(&mut self[chosen_index], unsafe {MaybeUninit::zeroed().assume_init()}); // consume self and return chosen item
+		let chosen_item = unsafe_utils::array_to_single_element(self, chosen_index);
 		Ok((chosen_index, chosen_item))
 	}
 }
@@ -137,7 +136,7 @@ impl Display for ListConstraintError {
 
 /// Custom implementation of fuzzy search, returns the index of the closest match
 pub fn custom_fuzzy_search(pattern: &str, items: &[&str]) -> Option<usize> {
-	let (mut best_score, mut best_index) = (custom_fuzzy_match(pattern, &items[0]), 0);
+	let (mut best_score, mut best_index) = (custom_fuzzy_match(pattern, items[0]), 0);
 	for (i, item) in items.iter().enumerate().skip(1) {
 		let score = custom_fuzzy_match(pattern, item);
 		if score > best_score {
@@ -270,7 +269,7 @@ impl<'a, T: Display> TryRead for &'a [T] {
 impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 	type Output = (usize, T);
 	type Default = usize;
-	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let options = self.iter().enumerate()
 			.map(|(i, option)| {
 				InputOption {
@@ -282,7 +281,7 @@ impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = std::mem::replace(&mut self[chosen_index], unsafe {MaybeUninit::zeroed().assume_init()}); // consume self and return chosen item
+		let chosen_item = unsafe_utils::array_to_single_element(self, chosen_index);
 		Ok((chosen_index, chosen_item))
 	}
 }
@@ -290,7 +289,7 @@ impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 impl<T: Display> TryRead for Vec<T> {
 	type Output = (usize, T);
 	type Default = usize;
-	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let options = self.iter().enumerate()
 			.map(|(i, option)| {
 				InputOption {
@@ -302,7 +301,7 @@ impl<T: Display> TryRead for Vec<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = std::mem::replace(&mut self[chosen_index], unsafe {MaybeUninit::zeroed().assume_init()}); // consume self and return chosen item
+		let chosen_item = unsafe_utils::vec_to_single_element(self, chosen_index);
 		Ok((chosen_index, chosen_item))
 	}
 }
@@ -310,7 +309,7 @@ impl<T: Display> TryRead for Vec<T> {
 impl<T: Display> TryRead for VecDeque<T> {
 	type Output = (usize, T);
 	type Default = usize;
-	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let options = self.iter().enumerate()
 			.map(|(i, option)| {
 				InputOption {
@@ -322,7 +321,7 @@ impl<T: Display> TryRead for VecDeque<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = std::mem::replace(&mut self[chosen_index], unsafe {MaybeUninit::zeroed().assume_init()}); // consume self and return chosen item
+		let chosen_item = unsafe_utils::vec_deque_to_single_element(self, chosen_index);
 		Ok((chosen_index, chosen_item))
 	}
 }
@@ -342,6 +341,6 @@ impl<T: Display> TryRead for LinkedList<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		Ok((chosen_index, self.into_iter().nth(chosen_index).unwrap()))
+		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen element is not in linked list")))
 	}
 }

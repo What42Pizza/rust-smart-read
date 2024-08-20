@@ -131,6 +131,8 @@ pub mod list_constraints;
 /// Contains implementations for `Range<T>`, `RangeFrom<T>`, etc
 pub mod range_constraints;
 
+pub(crate) mod unsafe_utils;
+
 /// Easy way to use existing functionality. If you want to extend functionality instead, you can do `use smart_read::*;`
 pub mod prelude {
 	pub use super::{
