@@ -22,10 +22,6 @@ Anything that implements [TryRead](https://docs.rs/smart-read/latest/smart_read/
 
 <br>
 
-Note: this does contain unsafe code (which I'm new to), if you'd like to review it you can find it [here](https://github.com/What42Pizza/rust-smart-read/blob/main/src/unsafe_utils.rs)
-
-<br>
-
 ### Basic Usage
 
 ```
@@ -55,35 +51,37 @@ let input = prompt!("Confirm input: "; [true] YesNoInput);
 
 
 // choose from a list of options
-let input = read!(["red", "green", "blue"]).1;
+let (index, input) = read!(["red", "green", "blue"]);
 // some input types have special syntax
-let input = read!(= "red", "green", "blue").1;
+let (index, input) = read!(= "red", "green", "blue");
 
-// choose from options, with each option having multiple valid matches
-let input = read!([
-	InputOption::new("red", vec!("1", "r"), ()), // displayed as "1: red", and so on
-	InputOption::new("green", vec!("2", "g"), ()),
-	InputOption::new("blue", vec!("3", "b"), ()),
+// give options bulletins, alternate matching strings, and extra data
+let (index, input) = read!([
+	InputOption::new("1", "red", vec!("r", "the first color"), ()), // displayed as "1: red", and so on
+	InputOption::new("2", "green", vec!("g", "the second color"), ()),
+	InputOption::new("3", "blue", vec!("b", "the third color"), ()),
 ]);
 
 // same as above, but using special syntax
-let input = read!(=
-	["1", "red", "r"], (),
-	["2", "green", "g"], (),
-	["3", "blue", "b"], (),
+let (index, input) = read!(=
+	["1", "red", "r", "the first color"], (),
+	["2", "green", "g", "the second color"], (),
+	["3", "blue", "b", "the third color"], (),
 );
 
 
 // one-time custom logic
 let input = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
+	// validate input as an integer
 	let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input"));};
+	// validate input as even
 	if x % 2 != 0 {return Err(String::from("Input is not even."));}
 	Ok(x)
 }));
 
 
 // combine any features
-let input = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5).1;
+let (index, input) = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5); // uses prompt message, default value, and special list_constraint syntax
 ```
 
 <br>
@@ -117,9 +115,8 @@ pub struct Car {
 
 // choose from a list of cars
 fn main() {
-	let options = [new_car("Red", "Toyota"), new_car("Silver", "Ram")];
-	let input = read!(options).1;
-	println!("You chose: {input}");
+	let (index, input) = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	println!("You chose: {input} (index {index})");
 }
 
 pub fn new_car(color: impl Into<String>, name: impl Into<String>) -> Car {
@@ -153,7 +150,7 @@ fn main() {
 
 impl<'a> TryRead<'a> for PasswordInput {
 	type Output = String;
-	type Default = ();
+	type Default = (); // ensure no default can be given
 	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
 		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = prompt.unwrap_or_else(

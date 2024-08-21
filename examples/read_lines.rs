@@ -7,7 +7,6 @@ fn main() {
 	println!("You entered: \"{input}\"");
 	
 	
-	
 	println!("\n==== `read!()` ====");
 	let input = read!(); // read a line of text
 	println!("You entered: \"{input}\"");
@@ -34,7 +33,6 @@ fn main() {
 	println!("You entered: \"{input}\"");
 	
 	
-	
 	println!("\n==== `prompt!(\"Confirm input: \"; YesNoInput)` ====");
 	let input = prompt!("Confirm input: "; YesNoInput); // read a bool
 	println!("You entered: \"{input}\"");
@@ -44,50 +42,48 @@ fn main() {
 	println!("You entered: \"{input}\"");
 	
 	
-	
 	println!("\n==== `read!([\"red\", \"green\", \"blue\"])` ====");
-	let input = read!(["red", "green", "blue"]).1; // choose from a list of options
-	println!("You entered: \"{input}\"");
+	let (index, input) = read!(["red", "green", "blue"]); // choose from a list of options
+	println!("You entered: index {index}, \"{input}\"");
 	println!("\n==== `read!(= \"red\", \"green\", \"blue\")` ====");
-	let input = read!(= "red", "green", "blue").1; // some inputs have special syntax
-	println!("You entered: \"{input}\"");
+	let (index, input) = read!(= "red", "green", "blue"); // some inputs have special syntax
+	println!("You entered: index {index}, \"{input}\"");
 	
 	println!("\n==== `read!([InputOption::new(...), ...])` ====");
-	let input = read!([
-		InputOption::new("1", "red", vec!("r", "the first color"), ()),
+	let (index, input) = read!([
+		InputOption::new("1", "red", vec!("r", "the first color"), ()), // displayed as "1: red", and so on
 		InputOption::new("2", "green", vec!("g", "the second color"), ()),
 		InputOption::new("3", "blue", vec!("b", "the third color"), ()),
 	]);
-	println!("You entered: index {}, \"{}\"", input.0, input.1.main_name);
+	println!("You entered: index {index}, \"{}\"", input.main_name);
 	
 	println!("\n==== `read!(= ...)` ====");
-	let input = read!([1usize] =
+	let (index, input) = read!(=
 		["1", "red", "r", "the first color"], (),
 		["2", "green", "g", "the second color"], (),
 		["3", "blue", "b", "the third color"], (),
 	);
-	println!("You entered: index {}, \"{}\"", input.0, input.1.main_name);
-	
+	println!("You entered: index {index}, \"{}\"", input.main_name);
 	
 	
 	println!("\n==== `prompt!(\"Enter an even int: \"; TransformValidate(...));` ====");
 	// one-time custom logic
 	let input = prompt!("Enter an even int: "; TransformValidate (|x| {
+		// validate input as an integer
 		let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input"));};
+		// validate input as even
 		if x % 2 != 0 {return Err(String::from("Input is not even."));}
 		Ok(x)
 	}));
 	println!("You entered: \"{input}\"");
 	
 	
-	
 	println!("\n==== `prompt!(\"Enter an int: \"; [1usize] = 1, 2, 3, 4, 5)` ====");
-	let input = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5).1; // combine any features
-	println!("You entered: \"{input}\"");
-	
+	let (index, input) = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5); // combine any features
+	println!("You entered: index {index}, \"{input}\"");
 	
 	
 	println!();
-	prompt!("read_lines finished, press enter to exit.");
+	prompt!("read_lines example finished, press enter to exit.");
 	
 }

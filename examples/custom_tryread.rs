@@ -17,7 +17,7 @@ fn main() {
 
 impl TryRead for PasswordInput {
 	type Output = String;
-	type Default = ();
+	type Default = (); // ensure no default can be given
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
 		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = prompt.unwrap_or_else(

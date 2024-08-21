@@ -10,8 +10,8 @@ pub struct Car {
 
 // choose from a list of cars
 fn main() {
-	let input = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram")).1;
-	println!("You chose: {input}");
+	let (index, input) = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	println!("You chose: {input} (index {index})");
 }
 
 
