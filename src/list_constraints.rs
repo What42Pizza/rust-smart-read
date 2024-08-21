@@ -108,8 +108,7 @@ impl<Data, const LEN: usize> TryRead for [InputOption<Data>; LEN] {
 	type Default = usize;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let chosen_index = read_list(&self, prompt, default)?;
-		let chosen_item = unsafe_utils::array_to_single_element(self, chosen_index);
-		Ok((chosen_index, chosen_item))
+		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
 
@@ -281,15 +280,14 @@ impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = unsafe_utils::array_to_single_element(self, chosen_index);
-		Ok((chosen_index, chosen_item))
+		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
 
 impl<T: Display> TryRead for Vec<T> {
 	type Output = (usize, T);
 	type Default = usize;
-	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let options = self.iter().enumerate()
 			.map(|(i, option)| {
 				InputOption {
@@ -301,15 +299,14 @@ impl<T: Display> TryRead for Vec<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = unsafe_utils::vec_to_single_element(self, chosen_index);
-		Ok((chosen_index, chosen_item))
+		Ok((chosen_index, self.swap_remove(chosen_index)))
 	}
 }
 
 impl<T: Display> TryRead for VecDeque<T> {
 	type Output = (usize, T);
 	type Default = usize;
-	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+	fn try_read_line(mut self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let options = self.iter().enumerate()
 			.map(|(i, option)| {
 				InputOption {
@@ -321,8 +318,7 @@ impl<T: Display> TryRead for VecDeque<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		let chosen_item = unsafe_utils::vec_deque_to_single_element(self, chosen_index);
-		Ok((chosen_index, chosen_item))
+		Ok((chosen_index, self.swap_remove_back(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
 
@@ -341,6 +337,6 @@ impl<T: Display> TryRead for LinkedList<T> {
 			})
 			.collect::<Vec<_>>();
 		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
-		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen element is not in linked list")))
+		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
