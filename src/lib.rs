@@ -41,15 +41,16 @@
 //! 
 //! ### List Constraints
 //! 
-//! These allow you to specify which inputs are allowed. Example: `read!(&["a", "b", "c"])`
+//! These allow you to specify which inputs are allowed. Example: `read!(["a", "b", "c"])`
 //! 
 //! Special syntax: `read!(= 1, 2, 3)`
 //! 
 //! Implemented types:
 //! ```
-//! impl<Data> TryRead for Vec<InputOption<Data>> // this is the main implementation, the 5 below this ultimately use this impl
+//! impl<Data> TryRead for &[InputOption<Data>]
+//! impl<Data> TryRead for [InputOption<Data>; _]
 //! impl<T: Display> TryRead for &[T]
-//! impl<T: Display> TryRead for &[T; _]
+//! impl<T: Display> TryRead for [T; _]
 //! impl<T: Display> TryRead for Vec<T>
 //! impl<T: Display> TryRead for VecDeque<T>
 //! impl<T: Display> TryRead for LinkedList<T>
