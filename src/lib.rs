@@ -33,11 +33,13 @@
 //! 
 //! ### Input Validations
 //! 
+//! These allow you to easily add custom logic to specific reads
+//! 
 //! ```
 //! // requests a string from the user which passes the programmed validation:
-//! impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F>
+//! impl<F> TryRead for SimpleValidate<F> where F: Fn(&str) -> Result<(), String>
 //! // similar to `SimpleValidate`, but also transforms the output:
-//! impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<F, O>
+//! impl<F, O> TryRead for TransformValidate<F, O> where F: Fn(String) -> Result<O, String>, O: Display
 //! ```
 //! 
 //! <br>
@@ -46,15 +48,16 @@
 //! 
 //! These allow you to specify which inputs are allowed. Example: `read!(["a", "b", "c"])`
 //! 
-//! Implemented types:
+//! NOTE: The default value for these types denotes the index of the default option
+//! 
 //! ```
 //! // requests a string from the user that matches any of the names from the `InputOption`s:
 //! impl<Data> TryRead for &[InputOption<Data>]
-//! impl<Data> TryRead for &[InputOption<Data>; _]
-//! impl<Data> TryRead for [InputOption<Data>; _]
+//! impl<Data> TryRead for &[InputOption<Data>; N]
+//! impl<Data> TryRead for [InputOption<Data>; N]
 //! // requests a string from the user that matches any value in the list:
 //! impl<T: Display> TryRead for &[T] 
-//! impl<T: Display> TryRead for [T; _]
+//! impl<T: Display> TryRead for [T; N]
 //! impl<T: Display> TryRead for Vec<T>
 //! impl<T: Display> TryRead for VecDeque<T>
 //! impl<T: Display> TryRead for LinkedList<T>
@@ -64,9 +67,8 @@
 //! 
 //! ### Range Constraints
 //! 
-//! These allow you to take a number within a specified range. Example: `read!(1. .. 100.)`, `read!(10..)`, etc
+//! These allow you to take a number within a specified range. Example: `read!(1. ..= 100.)`, `read!(10..)`, etc
 //! 
-//! Implemented types:
 //! ```
 //! impl<T> TryRead for Range<T>            where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
 //! impl<T> TryRead for RangeInclusive<T>   where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
@@ -84,7 +86,7 @@
 //! 
 //! Read macros: &nbsp; `read!([default_value] input_type)`
 //! 
-//! All components (prompt message, default value, and input type) are optional (except the message in prompts) and all are expressions.
+//! All components are optional (except the message in prompts) and all are expressions.
 //! 
 //! Some examples:
 //! ```
@@ -97,7 +99,7 @@
 //! 
 //! The input type is what determines the functionality of the input. It is another expression, and the type of the resulting value is what determines which impl of `TryRead` is used. For example, if you have `read!(1..10)` then the impl for `Range<i32>` is used. Also, when you have something like `read!(UsizeInput)`, you are creating a new `UsizeInput` value and passing it to the macro.
 //! 
-//! Some types have special syntax that can be substituted for the input_type component, they are:
+//! Some input types have special syntax that can be substituted for the input_type component, they are:
 //! 
 //! ```
 //! // this:
@@ -112,8 +114,8 @@
 //! 
 //! // this:
 //! read!(=
-//! 	["1_bulletin", "1_display_name", "1_alt_name_1", ...], 1_data,
-//! 	["2_bulletin", "2_display_name", "2_alt_name_1", ...], 2_data
+//! 	"1_bulletin"; "1_display_name"; ["1_alt_name_1", ...]; 1_data,
+//! 	"2_bulletin"; "2_display_name"; ["2_alt_name_1", ...]; 2_data,
 //! 	...
 //! )
 //! // is this:
@@ -126,9 +128,8 @@
 //! 
 //! <br>
 //! 
-//! And of course, you can combine this with any other piece of syntax: &nbsp; `prompt!("Enter a color: "; ["red"] = "red", "green", "blue")`
+//! And of course, you can combine this special input type syntax with everything else: &nbsp; `prompt!("Enter a color: "; ["red"]  = "red", "green", "blue")`
 //! 
-//! <br>
 //! <br>
 //! 
 //! If you have ideas for more functionality (including things you've found to be useful yourself), feel free to open an issue / pull request
@@ -150,7 +151,7 @@ use std::{error::Error, fmt::{Debug, Display}, io::Write};
 pub mod basics;
 /// Contains implementations for `SimpleValidate` and `TransformValidate`
 pub mod input_validation;
-/// Contains implementations for `Vec<T>`, `read!(= a, b, c)`, etc
+/// Contains implementations for `&[T]`, `[T; N]`, `Vec<T>`, `read!(= a, b, c)`, etc
 pub mod list_constraints;
 /// Contains implementations for `Range<T>`, `RangeFrom<T>`, etc
 pub mod range_constraints;
@@ -185,7 +186,7 @@ macro_rules! read {
 	}
 }
 
-/// Same as read!(), but returns a result
+/// Same as `read!()`, but returns a result
 #[macro_export]
 macro_rules! try_read {
 	($($args:tt)*) => {
@@ -195,7 +196,7 @@ macro_rules! try_read {
 
 
 
-/// Same as read!(), but also prints a prompt
+/// Same as `read!()`, but also prints a prompt
 #[macro_export]
 macro_rules! prompt {
 	($($args:tt)*) => {
@@ -203,7 +204,7 @@ macro_rules! prompt {
 	}
 }
 
-/// Same as prompt!(), but returns a result
+/// Same as `prompt!()`, but returns a result
 #[macro_export]
 macro_rules! try_prompt {
 	($prompt:expr) => {
@@ -238,9 +239,9 @@ macro_rules! run_with_prompt_and_default {
 		().try_read_line($prompt, $default)
 	}};
 	
-	($prompt:expr; $default:expr; = $([$option_bulletin:expr, $option_name:expr, $($option_alt:expr),*], $option_data:expr,)*) => {{
+	($prompt:expr; $default:expr; = $($option_bulletin:expr; $option_name:expr; [$($option_alt:expr),*]; $option_data:expr,)*) => {{
 		use smart_read::TryRead;
-		[$(InputOption::new($option_bulletin, vec!($option_name.to_string() $(,$option_alt.to_string())*), $option_data)),*].try_read_line($prompt, $default)
+		[$(InputOption::new($option_bulletin, &[$option_name.to_string() $(,$option_alt.to_string())*], $option_data)),*].try_read_line($prompt, $default)
 	}};
 	
 	($prompt:expr; $default:expr; = $($option:expr),*) => {{
@@ -248,9 +249,9 @@ macro_rules! run_with_prompt_and_default {
 		[$($option),*].try_read_line($prompt, $default)
 	}};
 	
-	($prompt:expr; $default:expr; $tryread_struct:expr) => {{
+	($prompt:expr; $default:expr; $tryread_type:expr) => {{
 		use smart_read::TryRead;
-		($tryread_struct).try_read_line($prompt, $default)
+		($tryread_type).try_read_line($prompt, $default)
 	}};
 	
 }
@@ -268,7 +269,7 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 
 
 
-/// This is what powers the whole crate. Any struct that implements this can be used with the macros
+/// This is what powers the whole crate. Any type that implements this can be used with the macros
 pub trait TryRead {
 	/// Defines the output type of `read` and `prompt` macros
 	type Output;
@@ -276,48 +277,6 @@ pub trait TryRead {
 	type Default;
 	/// This is what's called by the `read` and `prompt` macros
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output>;
-}
-
-
-
-/// Useful pre-made error
-#[derive(Debug)]
-pub struct DefaultNotAllowedError;
-
-impl Error for DefaultNotAllowedError {}
-
-impl Display for DefaultNotAllowedError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Default value is not allowed for input type.")
-	}
-}
-
-impl DefaultNotAllowedError {
-	/// Easily get a return value
-	pub fn new_box_result<T>() -> BoxResult<T> {
-		Err(Box::new(Self))
-	}
-}
-
-
-
-/// Useful pre-made error
-#[derive(Debug)]
-pub struct PromptNotAllowedError;
-
-impl Error for PromptNotAllowedError {}
-
-impl Display for PromptNotAllowedError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Prompt value is not allowed for input type.")
-	}
-}
-
-impl PromptNotAllowedError {
-	/// Easily get a return value
-	pub fn new_box_result<T>() -> BoxResult<T> {
-		Err(Box::new(Self))
-	}
 }
 
 
@@ -343,4 +302,15 @@ pub fn read_stdin() -> BoxResult<String> {
 /// Tiny utility function, clears the terminal output, but you should probably use the [ClearScreen](https://crates.io/crates/clearscreen) crate instead
 pub fn clear_term() {
 	print!("{esc}c", esc = 27 as char);
+}
+
+
+
+/// Waits for the user to press enter, prints "Press enter to continue "
+/// 
+/// This is basically a wrapper for `prompt!("Press enter to continue ")`
+pub fn wait_for_enter() {
+	// this would be `prompt!("Press...")`, but that causes an error because of scopes
+	print!("Press enter to continue ");
+	let _ = read_stdin();
 }

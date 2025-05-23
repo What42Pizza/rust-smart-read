@@ -203,17 +203,19 @@ pub fn custom_fuzzy_match(pattern: &str, item: &str) -> f32 {
 /// let mut option_number = 0;
 /// let choosable_colors =
 /// 	colors.iter().enumerate()
-/// 	.filter_map(|(i, color_name)| {
-/// 		let first_char = color_name.chars().next()?;
+/// 	.filter_map(|(i, color)| {
+/// 		let first_char = color.chars().next()?;
 /// 		if first_char.is_lowercase() {return None;}
 /// 		option_number += 1;
-/// 		Some(InputOption::new(option_number, vec!(*color_name), i))
+/// 		Some(InputOption::new(option_number, &[*color], i))
 /// 	})
 /// 	.collect::<Vec<_>>();
 /// 
 /// // prompt
+/// println!("List of colors: {colors:?}");
 /// let (_option_index, InputOption {extra_data: index_to_remove, ..}) = prompt!("Choose a color to remove: "; choosable_colors);
 /// colors.remove(*index_to_remove);
+/// println!("New list of colors: {colors:?}");
 /// ```
 pub struct InputOption<Data> {
 	/// This is what's displayed before the colon
@@ -226,18 +228,20 @@ pub struct InputOption<Data> {
 
 impl<Data> InputOption<Data> {
 	/// Basic initializer
-	pub fn new(bulletin: impl ToString, names: impl IntoVecString, data: Data) -> Self {
+	pub fn new<T: ToString>(bulletin: impl ToString, names: &[T], data: Data) -> Self {
+		let names = names.into_iter().map(ToString::to_string).collect::<Vec<_>>();
 		Self {
 			bulletin_string: Some(bulletin.to_string()),
-			names: names.into_vec_string(),
+			names,
 			extra_data: data,
 		}
 	}
 	/// Initializer without bulletin string
-	pub fn new_without_bulletin(names: impl IntoVecString, data: Data) -> Self {
+	pub fn new_without_bulletin<T: ToString>(names: &[T], data: Data) -> Self {
+		let names = names.into_iter().map(ToString::to_string).collect::<Vec<_>>();
 		Self {
 			bulletin_string: None,
-			names: names.into_vec_string(),
+			names,
 			extra_data: data,
 		}
 	}
@@ -254,25 +258,10 @@ impl<Data> InputOption<Data> {
 		}
 	}
 	/// Gets the name of the option from the start of `self.names`
+	/// 
 	/// It is assumed that there is at least one value in `names`, but if not, it returns `"[unnamed]"`
 	pub fn get_name(&self) -> &str {
 		self.names.first().map(Deref::deref).unwrap_or("[unnamed]")
-	}
-}
-
-/// Allows for `InputOption::new()` to take either `Vec<String>` or `Vec<&str>`
-pub trait IntoVecString {
-	/// Nothing much to add, this is the purpose of `IntoVecString`
-	fn into_vec_string(self) -> Vec<String>;
-}
-
-impl IntoVecString for Vec<String> {
-	fn into_vec_string(self) -> Vec<String> {self}
-}
-
-impl IntoVecString for Vec<&str> {
-	fn into_vec_string(self) -> Vec<String> {
-		self.into_iter().map(str::to_string).collect()
 	}
 }
 

@@ -85,7 +85,7 @@ pub struct BoolInput;
 impl TryRead for BoolInput {
 	type Output = bool;
 	type Default = bool;
-	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or(String::from("Enter a bool: "));
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {default}) ");
@@ -116,7 +116,7 @@ pub struct YesNoInput;
 impl TryRead for YesNoInput {
 	type Output = bool;
 	type Default = bool;
-	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let mut prompt = prompt.unwrap_or(String::from("Enter 'Yes' or 'No': "));
 		if let Some(default) = default.as_ref() {
 			prompt += &format!("(default: {}) ", if *default {"Yes"} else {"No"});
@@ -146,7 +146,7 @@ macro_rules! implement_number_input {
 		impl TryRead for $type_name {
 			type Output = $type_base;
 			type Default = $type_base;
-			fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> crate::BoxResult<Self::Output> {
+			fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 				let mut prompt = prompt.unwrap_or(String::from($default_prompt));
 				if let Some(default) = default.as_ref() {
 					prompt += &format!("(default: {default}) ");

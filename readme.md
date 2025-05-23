@@ -22,55 +22,57 @@ Anything that implements [TryRead](https://docs.rs/smart-read/latest/smart_read/
 
 <br>
 
-### Basic Usage
+## Basic Usages
 
 ```
 use smart_read::prelude::*;
 
-// read a line of text
+// read a line of text:
 let input = read!();
 
-// prompt a line of text
+// prompt a line of text:
 let input = prompt!("Enter a string: ");
 
-// read specific types
+// read specific types:
 let input = read!(UsizeInput);
 let input = read!(BoolInput);
 let input = read!(NonWhitespaceInput);
 let input = read!(I32Input);
 
-// read a number within a range
+// read a number within a range:
 let input = read!(0. ..= 100.);
 
 
-// read a bool
+// read a bool:
 let input = prompt!("Confirm input: "; YesNoInput);
 
-// set a default value
+// set a default value:
 let input = prompt!("Confirm input: "; [true] YesNoInput);
 
 
-// choose from a list of options
+// choose from a list of options:
 let (index, input) = read!(["red", "green", "blue"]);
-// some input types have special syntax
+// some input types have special syntax:
 let (index, input) = read!(= "red", "green", "blue");
 
-// give options bulletins, alternate matching strings, and extra data
+// give options bulletins, alternate matching strings, and extra data:
 let (index, input) = read!([
-	InputOption::new("1", "red", vec!("r", "choose first"), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
-	InputOption::new("2", "green", vec!("g", "choose second"), ()),
-	InputOption::new("3", "blue", vec!("b", "choose third"), ()),
+	InputOption::new("1", vec!("red"  , "r", "choose first" ), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+	InputOption::new("2", vec!("green", "g", "choose second"), ()),
+	InputOption::new("3", vec!("blue" , "b", "choose third" ), ()),
 ]);
 
-// same as above, but using special syntax
+// same as above, but using special syntax:
 let (index, input) = read!(=
-	["1", "red", "r", "choose first"], (),
-	["2", "green", "g", "choose second"], (),
-	["3", "blue", "b", "choose third"], (),
+	"1"; "red"  ; ["r", "choose first" ]; (), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+	"2"; "green"; ["g", "choose second"]; (),
+	"3"; "blue" ; ["b", "choose third" ]; (),
 );
 
+// NOTE: The default value for list types denotes the index of the default option
 
-// one-time custom logic
+
+// one-time custom logic:
 let input = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Result<isize, String> { // explicit types here are optional, only added for demonstration
 	// validate input as an integer
 	let Ok(x) = x.parse::<isize>() else {return Err(String::from("Could not parse input"));};
@@ -80,8 +82,8 @@ let input = prompt!("Enter an even int: "; TransformValidate (|x: String| -> Res
 }));
 
 
-// combine any features
-let (index, input) = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5); // uses prompt message, default value, and special list_constraint syntax
+// combine any syntax:
+let (index, input) = prompt!("Enter an int: "; [2usize] = "a", "b", "c"); // uses prompt message, default value, and special list_constraint syntax
 ```
 
 <br>
@@ -105,7 +107,14 @@ You entered: "1"
 ### Extend Existing Functionality
 
 ```
+// Syntax like `read!(= 1, 2, 3)` can take any type that implements `Display`
+
 use smart_read::prelude::*;
+
+fn main() {
+	let (index, input) = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
+	println!("You chose: {input} (index {index})");
+}
 
 #[derive(Clone, PartialEq)]
 pub struct Car {
@@ -113,20 +122,13 @@ pub struct Car {
 	pub color: String,
 }
 
-// choose from a list of cars
-fn main() {
-	let (index, input) = read!(= new_car("Red", "Toyota"), new_car("Silver", "Ram"));
-	println!("You chose: {input} (index {index})");
-}
-
-pub fn new_car(color: impl Into<String>, name: impl Into<String>) -> Car {
-	Car {name: name.into(), color: color.into()}
-}
-
 impl std::fmt::Display for Car {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{} {}", self.color, self.name)
 	}
+}
+pub fn new_car(color: impl Into<String>, name: impl Into<String>) -> Car {
+	Car {name: name.into(), color: color.into()}
 }
 ```
 
@@ -135,12 +137,9 @@ impl std::fmt::Display for Car {
 ### Add New Functionality
 
 ```
-use smart_read::*;
+// You can implement `TryRead` for custom types to add your own functionality
 
-struct PasswordInput {
-	pub min_len: usize,
-	pub min_digits: usize,
-}
+use smart_read::*;
 
 // take in a password input
 fn main() {
@@ -148,11 +147,15 @@ fn main() {
 	println!("You entered: \"{input}\"");
 }
 
+struct PasswordInput {
+	pub min_len: usize,
+	pub min_digits: usize,
+}
+
 impl TryRead for PasswordInput {
 	type Output = String;
 	type Default = (); // ensure no default can be given
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
-		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
 		);

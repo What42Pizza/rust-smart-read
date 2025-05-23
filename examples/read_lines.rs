@@ -51,17 +51,17 @@ fn main() {
 	
 	println!("\n==== `read!([InputOption::new(...), ...])` ====");
 	let (index, input) = read!([
-		InputOption::new("1", vec!("red", "r", "choose first"), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
-		InputOption::new("2", vec!("green", "g", "choose second"), ()),
-		InputOption::new("3", vec!("blue", "b", "choose third"), ()),
+		InputOption::new("1", &["red"  , "r", "choose first" ], ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+		InputOption::new("2", &["green", "g", "choose second"], ()),
+		InputOption::new("3", &["blue" , "b", "choose third" ], ()),
 	]);
 	println!("You entered: index {index}, \"{}\"", input.names[0]);
 	
 	println!("\n==== `read!(= ...)` ====");
 	let (index, input) = read!(=
-		["1", "red", "r", "choose first"], (),
-		["2", "green", "g", "choose second"], (),
-		["3", "blue", "b", "choose third"], (),
+		"1"; "red"  ; ["r", "choose first" ]; (), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+		"2"; "green"; ["g", "choose second"]; (),
+		"3"; "blue" ; ["b", "choose third" ]; (),
 	);
 	println!("You entered: index {index}, \"{}\"", input.names[0]);
 	
@@ -77,8 +77,8 @@ fn main() {
 	println!("You entered: \"{input}\"");
 	
 	
-	println!("\n==== `prompt!(\"Enter an int: \"; [1usize] = 1, 2, 3, 4, 5)` ====");
-	let (index, input) = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5); // combine any features
+	println!("\n==== `prompt!(\"Enter an int: \"; [2usize] = \"a\", \"b\", \"c\")` ====");
+	let (index, input) = prompt!("Enter an int: "; [2usize] = "a", "b", "c"); // combine any features
 	println!("You entered: index {index}, \"{input}\"");
 	
 	

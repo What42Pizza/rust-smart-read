@@ -2,7 +2,7 @@ use crate::*;
 
 
 
-/// Allows you to keep reading until a condition is valid
+/// Keeps taking using input until a programmed condition is met
 pub struct SimpleValidate<F: Fn(&str) -> Result<(), String>>(pub F);
 
 impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F> {
@@ -34,7 +34,7 @@ impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F> {
 
 
 
-/// Allows you to keep reading until a transform is valid
+/// Keeps taking using input until a programmed condition and transformation is met
 pub struct TransformValidate<F: Fn(String) -> Result<O, String>, O: Display>(pub F);
 
 impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<F, O> {
