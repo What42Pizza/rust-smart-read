@@ -51,20 +51,19 @@ fn main() {
 	
 	println!("\n==== `read!([InputOption::new(...), ...])` ====");
 	let (index, input) = read!([
-		InputOption::new("1", "red", vec!("r", "the first color"), ()), // displayed as "1: red", and so on
-		InputOption::new("2", "green", vec!("g", "the second color"), ()),
-		InputOption::new("3", "blue", vec!("b", "the third color"), ()),
+		InputOption::new("1", vec!("red", "r", "choose first"), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+		InputOption::new("2", vec!("green", "g", "choose second"), ()),
+		InputOption::new("3", vec!("blue", "b", "choose third"), ()),
 	]);
-	println!("You entered: index {index}, \"{}\"", input.main_name);
+	println!("You entered: index {index}, \"{}\"", input.names[0]);
 	
 	println!("\n==== `read!(= ...)` ====");
 	let (index, input) = read!(=
-		["1", "red", "r", "the first color"], (),
-		["2", "green", "g", "the second color"], (),
-		["3", "blue", "b", "the third color"], (),
+		["1", "red", "r", "choose first"], (),
+		["2", "green", "g", "choose second"], (),
+		["3", "blue", "b", "choose third"], (),
 	);
-	println!("You entered: index {index}, \"{}\"", input.main_name);
-	
+	println!("You entered: index {index}, \"{}\"", input.names[0]);
 	
 	println!("\n==== `prompt!(\"Enter an even int: \"; TransformValidate(...));` ====");
 	// one-time custom logic

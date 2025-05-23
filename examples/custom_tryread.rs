@@ -29,11 +29,11 @@ impl TryRead for PasswordInput {
 			let password = read_stdin()?;
 			
 			if password.len() < 10 {
-				println!("Password must have at least 10 characters");
+				println!("Invalid, password must have at least 10 characters");
 				continue;
 			}
 			if password.chars().filter(|c| c.is_digit(10)).count() < 1 {
-				println!("Password must have at least 1 digit");
+				println!("Invalid, password must have at least 1 digit");
 				continue;
 			}
 			

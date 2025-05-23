@@ -1,8 +1,9 @@
 use crate::*;
-use std::collections::{LinkedList, VecDeque};
+use std::{collections::{LinkedList, VecDeque}, ops::Deref};
 
 
 
+// NOTE: the returned usize has to be less than the length of input_options
 fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<usize> {
 	if input_options.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
@@ -23,10 +24,10 @@ fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, 
 			choose_name_mappings.push(i);
 			choose_name_hidden_flags.push(false);
 		}
-		all_choose_strings.push(&*option.main_name);
+		all_choose_strings.push(option.get_name());
 		choose_name_mappings.push(i);
 		choose_name_hidden_flags.push(false);
-		for alt_name in &option.alt_names {
+		for alt_name in &option.names[1..] {
 			all_choose_strings.push(alt_name);
 			choose_name_mappings.push(i);
 			choose_name_hidden_flags.push(true);
@@ -74,7 +75,7 @@ fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, 
 			let possible_option_index = choose_name_mappings[possible_choose_string_index];
 			let possible_option = &input_options[possible_option_index];
 			if choose_name_hidden_flags[possible_choose_string_index] {
-				print!("Did you mean to type \"{}\", for option \"{}\"? (enter nothing to confirm, or re-enter input) ", all_choose_strings[possible_choose_string_index], possible_option.main_name);
+				print!("Did you mean to type \"{}\", for option \"{}\"? (enter nothing to confirm, or re-enter input) ", all_choose_strings[possible_choose_string_index], possible_option.get_name());
 			} else {
 				print!("Did you mean \"{}\"? (enter nothing to confirm, or re-enter input) ", all_choose_strings[possible_choose_string_index]);
 			}
@@ -94,6 +95,7 @@ fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, 
 
 
 
+// NOTE: the returned usize is always less than the length of self
 impl<'a, Data> TryRead for &'a [InputOption<Data>] {
 	type Output = (usize, &'a InputOption<Data>);
 	type Default = usize;
@@ -103,11 +105,24 @@ impl<'a, Data> TryRead for &'a [InputOption<Data>] {
 	}
 }
 
+// having this does allow for some additional scenarios to compile
+// NOTE: the returned usize is always less than the length of self
+impl<'a, Data, const LEN: usize> TryRead for &'a [InputOption<Data>; LEN] {
+	type Output = (usize, &'a InputOption<Data>);
+	type Default = usize;
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+		let chosen_index = read_list(self, prompt, default)?;
+		Ok((chosen_index, &self[chosen_index]))
+	}
+}
+
+// NOTE: the returned usize is always less than the length of self
 impl<Data, const LEN: usize> TryRead for [InputOption<Data>; LEN] {
 	type Output = (usize, InputOption<Data>);
 	type Default = usize;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
 		let chosen_index = read_list(&self, prompt, default)?;
+		#[allow(clippy::expect_used)] // REASON: the output of read_list() is always less than the length of the given slice
 		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
@@ -185,60 +200,79 @@ pub fn custom_fuzzy_match(pattern: &str, item: &str) -> f32 {
 /// let mut colors = vec!("Red", "green", "Blue");
 /// 
 /// // prepare options, only capitalized colors can be removed
-/// let mut option_number = 1;
+/// let mut option_number = 0;
 /// let choosable_colors =
 /// 	colors.iter().enumerate()
 /// 	.filter_map(|(i, color_name)| {
 /// 		let first_char = color_name.chars().next()?;
 /// 		if first_char.is_lowercase() {return None;}
-/// 		Some(OptionWithData::new(option_number, color_name, vec!(), i))
+/// 		option_number += 1;
+/// 		Some(InputOption::new(option_number, vec!(*color_name), i))
 /// 	})
 /// 	.collect::<Vec<_>>();
 /// 
 /// // prompt
-/// let OptionWithData {data: index_to_remove, ..} = prompt!("Choose a color to remove: "; choosable_colors);
-/// colors.remove(index_to_remove);
+/// let (_option_index, InputOption {extra_data: index_to_remove, ..}) = prompt!("Choose a color to remove: "; choosable_colors);
+/// colors.remove(*index_to_remove);
 /// ```
 pub struct InputOption<Data> {
 	/// This is what's displayed before the colon
 	pub bulletin_string: Option<String>,
-	/// This is what's shown as the option name
-	pub main_name: String,
-	/// These are alternate valid strings that the user could enter to choose this option
-	pub alt_names: Vec<String>,
+	/// The first value is shown as the option's name, and all following values are alternative strings that can be used to select this option
+	pub names: Vec<String>,
 	/// Extra data for storing whatever you want
-	pub data: Data,
+	pub extra_data: Data,
 }
 
 impl<Data> InputOption<Data> {
 	/// Basic initializer
-	pub fn new(bulletin: impl Into<String>, display: impl Into<String>, choose: Vec<impl Into<String>>, data: Data) -> Self {
+	pub fn new(bulletin: impl ToString, names: impl IntoVecString, data: Data) -> Self {
 		Self {
-			bulletin_string: Some(bulletin.into()),
-			main_name: display.into(),
-			alt_names: choose.into_iter().map(|v| v.into()).collect(),
-			data,
+			bulletin_string: Some(bulletin.to_string()),
+			names: names.into_vec_string(),
+			extra_data: data,
 		}
 	}
 	/// Initializer without bulletin string
-	pub fn new_without_bulletin(display: impl Into<String>, choose: Vec<impl Into<String>>, data: Data) -> Self {
+	pub fn new_without_bulletin(names: impl IntoVecString, data: Data) -> Self {
 		Self {
 			bulletin_string: None,
-			main_name: display.into(),
-			alt_names: choose.into_iter().map(|v| v.into()).collect(),
-			data,
+			names: names.into_vec_string(),
+			extra_data: data,
 		}
 	}
 	/// Internal function
 	pub fn get_display_string(&self, is_default: Option<bool>) -> String {
+		let name = self.get_name();
 		match (self.bulletin_string.as_deref(), is_default) {
-			(Some(bulletin_string), Some(true )) => format!("[{bulletin_string}]: {}", self.main_name),
-			(Some(bulletin_string), Some(false)) => format!(" {bulletin_string}:  {}", self.main_name),
-			(None                       , Some(true )) => format!("[{}]", self.main_name),
-			(None                       , Some(false)) => format!(" {} ", self.main_name),
-			(Some(bulletin_string), None       ) => format!("{bulletin_string}: {}", self.main_name),
-			(None                       , None       ) => format!("{}", self.main_name),
+			(Some(bulletin_string), Some(true )) => format!("[{bulletin_string}]: {name}",),
+			(Some(bulletin_string), Some(false)) => format!(" {bulletin_string}:  {name}",),
+			(None                       , Some(true )) => format!("[{name}]",),
+			(None                       , Some(false)) => format!(" {name} ",),
+			(Some(bulletin_string), None       ) => format!("{bulletin_string}: {name}",),
+			(None                       , None       ) => name.to_string(),
 		}
+	}
+	/// Gets the name of the option from the start of `self.names`
+	/// It is assumed that there is at least one value in `names`, but if not, it returns `"[unnamed]"`
+	pub fn get_name(&self) -> &str {
+		self.names.first().map(Deref::deref).unwrap_or("[unnamed]")
+	}
+}
+
+/// Allows for `InputOption::new()` to take either `Vec<String>` or `Vec<&str>`
+pub trait IntoVecString {
+	/// Nothing much to add, this is the purpose of `IntoVecString`
+	fn into_vec_string(self) -> Vec<String>;
+}
+
+impl IntoVecString for Vec<String> {
+	fn into_vec_string(self) -> Vec<String> {self}
+}
+
+impl IntoVecString for Vec<&str> {
+	fn into_vec_string(self) -> Vec<String> {
+		self.into_iter().map(str::to_string).collect()
 	}
 }
 
@@ -254,16 +288,35 @@ impl<'a, T: Display> TryRead for &'a [T] {
 			.map(|(i, option)| {
 				InputOption {
 					bulletin_string: Some((i + 1).to_string()),
-					main_name: option.to_string(),
-					alt_names: vec!(),
-					data: (),
+					names: vec!(option.to_string()),
+					extra_data: (),
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
+		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
+
+// for some reason this one doesn't seem needed
+//impl<'a, T: Display, const LEN: usize> TryRead for &'a [T; LEN] {
+//	type Output = (usize, &'a T);
+//	type Default = usize;
+//	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output> {
+//		let options = self.iter().enumerate()
+//			.map(|(i, option)| {
+//				InputOption {
+//					bulletin_string: Some((i + 1).to_string()),
+//					main_name: option.to_string(),
+//					alt_names: vec!(),
+//					data: (),
+//				}
+//			})
+//			.collect::<Vec<_>>();
+//		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+//		Ok((chosen_index, &self[chosen_index]))
+//	}
+//}
 
 impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 	type Output = (usize, T);
@@ -273,13 +326,13 @@ impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 			.map(|(i, option)| {
 				InputOption {
 					bulletin_string: Some((i + 1).to_string()),
-					main_name: option.to_string(),
-					alt_names: vec!(),
-					data: (),
+					names: vec!(option.to_string()),
+					extra_data: (),
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
+		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
@@ -292,13 +345,12 @@ impl<T: Display> TryRead for Vec<T> {
 			.map(|(i, option)| {
 				InputOption {
 					bulletin_string: Some((i + 1).to_string()),
-					main_name: option.to_string(),
-					alt_names: vec!(),
-					data: (),
+					names: vec!(option.to_string()),
+					extra_data: (),
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
+		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
 		Ok((chosen_index, self.swap_remove(chosen_index)))
 	}
 }
@@ -311,13 +363,13 @@ impl<T: Display> TryRead for VecDeque<T> {
 			.map(|(i, option)| {
 				InputOption {
 					bulletin_string: Some((i + 1).to_string()),
-					main_name: option.to_string(),
-					alt_names: vec!(),
-					data: (),
+					names: vec!(option.to_string()),
+					extra_data: (),
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
+		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.swap_remove_back(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
@@ -330,13 +382,13 @@ impl<T: Display> TryRead for LinkedList<T> {
 			.map(|(i, option)| {
 				InputOption {
 					bulletin_string: Some((i + 1).to_string()),
-					main_name: option.to_string(),
-					alt_names: vec!(),
-					data: (),
+					names: vec!(option.to_string()),
+					extra_data: (),
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (&*options).try_read_line(prompt, default)?.0;
+		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }

@@ -2,38 +2,41 @@
 //! 
 //! <br>
 //! 
-//! ### Anything that implements the `TryRead` trait can be used with smart-read's macros, and many implementations are already given
+//! ### Functionality in this crate is defined by types that implement `TryRead`.
 //! 
 //! <br>
 //! <br>
 //! 
-//! ## Types that implement TryRead &nbsp; (basically, a list of all default functionality):
+//! # Types that implement `TryRead`:
+//! 
+//! This is basically a list of all default functionality, if you want to know more about one of these types, the header name is the same as the module which contains the type
 //! 
 //! <br>
 //! 
 //! ### Basics
 //! 
 //! ```
-//! impl TryRead for ()
-//! impl TryRead for NonEmptyInput
-//! impl TryRead for NonWhitespaceInput
-//! impl TryRead for BoolInput
-//! impl TryRead for YesNoInput
-//! impl TryRead for CharInput
-//! impl TryRead for UsizeInput
-//! impl TryRead for IsizeInput
-//! impl TryRead for U8Input, U16Input, U32Input, U64Input, U128Input
-//! impl TryRead for I8Input, I16Input, I32Input, I64Input, I128Input
+//! impl TryRead for ()                  // requests any string from the user
+//! impl TryRead for NonEmptyInput       // requests a non-empty string from the user
+//! impl TryRead for NonWhitespaceInput  // requests a non-whitespace string from the user
+//! impl TryRead for BoolInput           // requests a true/false/t/f string from the user
+//! impl TryRead for YesNoInput          // requests a yes/no/y/n string from the user
+//! impl TryRead for CharInput           // requests a single-char string from the user
+//! // requests a number from the user that can be converted to a specific type:
+//! impl TryRead for U8Input, U16Input, U32Input, U64Input, U128Input, USizeInput
+//! impl TryRead for I8Input, I16Input, I32Input, I64Input, I128Input, ISizeInput
 //! impl TryRead for F32Input
 //! impl TryRead for F64Input
 //! ```
 //! 
 //! <br>
 //! 
-//! ### One-Time Logic
+//! ### Input Validations
 //! 
 //! ```
+//! // requests a string from the user which passes the programmed validation:
 //! impl<F: Fn(&str) -> Result<(), String>> TryRead for SimpleValidate<F>
+//! // similar to `SimpleValidate`, but also transforms the output:
 //! impl<F: Fn(String) -> Result<O, String>, O: Display> TryRead for TransformValidate<F, O>
 //! ```
 //! 
@@ -43,13 +46,14 @@
 //! 
 //! These allow you to specify which inputs are allowed. Example: `read!(["a", "b", "c"])`
 //! 
-//! Special syntax: `read!(= 1, 2, 3)`
-//! 
 //! Implemented types:
 //! ```
+//! // requests a string from the user that matches any of the names from the `InputOption`s:
 //! impl<Data> TryRead for &[InputOption<Data>]
+//! impl<Data> TryRead for &[InputOption<Data>; _]
 //! impl<Data> TryRead for [InputOption<Data>; _]
-//! impl<T: Display> TryRead for &[T]
+//! // requests a string from the user that matches any value in the list:
+//! impl<T: Display> TryRead for &[T] 
 //! impl<T: Display> TryRead for [T; _]
 //! impl<T: Display> TryRead for Vec<T>
 //! impl<T: Display> TryRead for VecDeque<T>
@@ -64,11 +68,11 @@
 //! 
 //! Implemented types:
 //! ```
-//! impl<T> TryRead for Range<T>            where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
-//! impl<T> TryRead for RangeInclusive<T>   where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
-//! impl<T> TryRead for RangeTo<T>          where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
-//! impl<T> TryRead for RangeFrom<T>        where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
-//! impl<T> TryRead for RangeToInclusive<T> where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display,
+//! impl<T> TryRead for Range<T>            where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
+//! impl<T> TryRead for RangeInclusive<T>   where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
+//! impl<T> TryRead for RangeTo<T>          where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
+//! impl<T> TryRead for RangeFrom<T>        where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
+//! impl<T> TryRead for RangeToInclusive<T> where T: Display + FromStr + PartialOrd<T>, <T as FromStr>::Err: Display
 //! ```
 //! 
 //! <br>
@@ -76,39 +80,58 @@
 //! 
 //! # Macro Syntax
 //! 
-//! There are three items that can be included in a macro call (all optional): the prompt message, the default value, and the input type.
+//! Prompt macros: &nbsp; `prompt!("message to user"; [default_value] input_type)`
+//! 
+//! Read macros: &nbsp; `read!([default_value] input_type)`
+//! 
+//! All components (prompt message, default value, and input type) are optional (except the message in prompts) and all are expressions.
+//! 
+//! Some examples:
+//! ```
+//! read!([2] 1..=10);  // take a number from 1 to 10, with 2 as the default
+//! prompt!(messages[i]; UsizeInput);  // request a positive integer for the current prompt
+//! prompt!("continue?"; [true] YesNoInput);  // request a yes/no input with yes being the default
+//! ```
 //! 
 //! <br>
 //! 
-//! The prompt message is simply an expression, followed by `;` if there's more afterwards. This is required when using the prompt macro, and not available with the read macro.
+//! The input type is what determines the functionality of the input. It is another expression, and the type of the resulting value is what determines which impl of `TryRead` is used. For example, if you have `read!(1..10)` then the impl for `Range<i32>` is used. Also, when you have something like `read!(UsizeInput)`, you are creating a new `UsizeInput` value and passing it to the macro.
 //! 
-//! Examples: &nbsp; `prompt!("Enter any string: ")`, &nbsp; `prompt!(messages[i]; YesNoInput)`
+//! Some types have special syntax that can be substituted for the input_type component, they are:
+//! 
+//! ```
+//! // this:
+//! read!()
+//! // is this:
+//! read!(())
+//! 
+//! // this:
+//! read!(= 1, 2, 3)
+//! // is this:
+//! read!([1, 2, 3])
+//! 
+//! // this:
+//! read!(=
+//! 	["1_bulletin", "1_display_name", "1_alt_name_1", ...], 1_data,
+//! 	["2_bulletin", "2_display_name", "2_alt_name_1", ...], 2_data
+//! 	...
+//! )
+//! // is this:
+//! read!([
+//! 	InputOption::new("1_bulletin", vec!("1_display_name", "1_alt_name_1", ...), 1_data),
+//! 	InputOption::new("2_bulletin", vec!("2_display_name", "2_alt_name_1", ...), 2_data),
+//! 	...
+//! ])
+//! ```
 //! 
 //! <br>
-//! 
-//! The default value comes after the prompt message (if given), and must be enclosed in `[]`.
-//! 
-//! Examples: &nbsp; `read!([1] 0..10)`, &nbsp; `prompt!("Confirm action? "; [true] YesNoInput)`
-//! 
-//! <br>
-//! 
-//! The input type is a value that determines how the input is read. You could give a range to read a number within a range, or a `UsizeInput` to read an int, or whatever else implements `TryRead` from this crate (fun fact, leaving this blank will use the impl for `()`).
-//! 
-//! Examples: &nbsp; `read!()`, &nbsp; `prompt!("Enter a color: "; ["red"] &["red", "green", "blue"])`, &nbsp; `read!(ExampleStruct {arg: 42})`
-//! 
-//! <br>
-//! <br>
-//! 
-//! # Feature-Specific Syntax
-//! 
-//! Currently, only one feature has custom syntax, which is the implementation for slices. Instead of `read!(&[item1, item2, ...])`, you can write: `read!(= item1, item2, ...)`
 //! 
 //! And of course, you can combine this with any other piece of syntax: &nbsp; `prompt!("Enter a color: "; ["red"] = "red", "green", "blue")`
 //! 
 //! <br>
 //! <br>
 //! 
-//! If you have ideas for more functionality (including things that you've found to be useful for yourself), feel free to open an issue / pull request
+//! If you have ideas for more functionality (including things you've found to be useful yourself), feel free to open an issue / pull request
 //! 
 //! <br>
 //! <br>
@@ -126,7 +149,7 @@ use std::{error::Error, fmt::{Debug, Display}, io::Write};
 /// Contains implementations for `()`, `UsizeInput`, `NonEmptyInput`, etc
 pub mod basics;
 /// Contains implementations for `SimpleValidate` and `TransformValidate`
-pub mod one_time_logic;
+pub mod input_validation;
 /// Contains implementations for `Vec<T>`, `read!(= a, b, c)`, etc
 pub mod list_constraints;
 /// Contains implementations for `Range<T>`, `RangeFrom<T>`, etc
@@ -140,7 +163,7 @@ pub mod prelude {
 		prompt,
 		try_prompt,
 		basics::*,
-		one_time_logic::*,
+		input_validation::*,
 		list_constraints::*,
 		range_constraints::*,
 	};
@@ -165,11 +188,9 @@ macro_rules! read {
 /// Same as read!(), but returns a result
 #[macro_export]
 macro_rules! try_read {
-	
 	($($args:tt)*) => {
 		smart_read::run_with_prompt!(None; $($args)*)
 	};
-	
 }
 
 
@@ -185,13 +206,12 @@ macro_rules! prompt {
 /// Same as prompt!(), but returns a result
 #[macro_export]
 macro_rules! try_prompt {
-	
-	($prompt:expr) => {smart_read::try_prompt!($prompt;)};
-	
+	($prompt:expr) => {
+		smart_read::run_with_prompt!(Some($prompt.to_string());)
+	};
 	($prompt:expr; $($args:tt)*) => {
 		smart_read::run_with_prompt!(Some($prompt.to_string()); $($args)*)
 	};
-	
 }
 
 
@@ -199,15 +219,12 @@ macro_rules! try_prompt {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! run_with_prompt {
-	
 	($prompt:expr; [$default:expr] $($args:tt)*) => {
 		smart_read::run_with_prompt_and_default!($prompt; Some($default.into()); $($args)*)
 	};
-	
 	($prompt:expr; $($args:tt)*) => {
 		smart_read::run_with_prompt_and_default!($prompt; None; $($args)*)
 	};
-	
 }
 
 
@@ -221,9 +238,9 @@ macro_rules! run_with_prompt_and_default {
 		().try_read_line($prompt, $default)
 	}};
 	
-	($prompt:expr; $default:expr; = $([$option_bulletin:expr, $option_name:expr, $($option_alt:expr),*], $option_data:expr),*,) => {{
+	($prompt:expr; $default:expr; = $([$option_bulletin:expr, $option_name:expr, $($option_alt:expr),*], $option_data:expr,)*) => {{
 		use smart_read::TryRead;
-		[$(InputOption::new($option_bulletin, $option_name, vec!($($option_alt),*), $option_data)),*].try_read_line($prompt, $default)
+		[$(InputOption::new($option_bulletin, vec!($option_name.to_string() $(,$option_alt.to_string())*), $option_data)),*].try_read_line($prompt, $default)
 	}};
 	
 	($prompt:expr; $default:expr; = $($option:expr),*) => {{
@@ -233,7 +250,7 @@ macro_rules! run_with_prompt_and_default {
 	
 	($prompt:expr; $default:expr; $tryread_struct:expr) => {{
 		use smart_read::TryRead;
-		$tryread_struct.try_read_line($prompt, $default)
+		($tryread_struct).try_read_line($prompt, $default)
 	}};
 	
 }

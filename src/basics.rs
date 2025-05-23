@@ -179,14 +179,6 @@ macro_rules! implement_number_input {
 pub struct CharInput;
 implement_number_input!(CharInput, char, "Enter a character: ");
 
-/// Allows you take take a usize input
-pub struct UsizeInput;
-implement_number_input!(UsizeInput, usize, "Enter a number (positive integer): ");
-
-/// Allows you take take an isize input
-pub struct IsizeInput;
-implement_number_input!(IsizeInput, isize, "Enter a number (integer): ");
-
 /// Allows you take take a u8 input
 pub struct U8Input;
 implement_number_input!(U8Input, u8, "Enter a number (positive integer): ");
@@ -226,6 +218,14 @@ implement_number_input!(U128Input, u128, "Enter a number (positive integer): ");
 /// Allows you take take an i128 input
 pub struct I128Input;
 implement_number_input!(I128Input, i128, "Enter a number (integer): ");
+
+/// Allows you take take a usize input
+pub struct UsizeInput;
+implement_number_input!(UsizeInput, usize, "Enter a number (positive integer): ");
+
+/// Allows you take take an isize input
+pub struct IsizeInput;
+implement_number_input!(IsizeInput, isize, "Enter a number (integer): ");
 
 /// Allows you take take an f32 input
 pub struct F32Input;

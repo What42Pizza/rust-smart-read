@@ -57,16 +57,16 @@ let (index, input) = read!(= "red", "green", "blue");
 
 // give options bulletins, alternate matching strings, and extra data
 let (index, input) = read!([
-	InputOption::new("1", "red", vec!("r", "the first color"), ()), // displayed as "1: red", and so on
-	InputOption::new("2", "green", vec!("g", "the second color"), ()),
-	InputOption::new("3", "blue", vec!("b", "the third color"), ()),
+	InputOption::new("1", "red", vec!("r", "choose first"), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+	InputOption::new("2", "green", vec!("g", "choose second"), ()),
+	InputOption::new("3", "blue", vec!("b", "choose third"), ()),
 ]);
 
 // same as above, but using special syntax
 let (index, input) = read!(=
-	["1", "red", "r", "the first color"], (),
-	["2", "green", "g", "the second color"], (),
-	["3", "blue", "b", "the third color"], (),
+	["1", "red", "r", "choose first"], (),
+	["2", "green", "g", "choose second"], (),
+	["3", "blue", "b", "choose third"], (),
 );
 
 
@@ -93,7 +93,7 @@ let (index, input) = prompt!("Enter an int: "; [1usize] = 1, 2, 3, 4, 5); // use
 Enter a number within the range [0.0, 100.0]: 100.0001
 
 Invalid input, not within bounds
-Enter a number within the range [0.0, 100.0]: aa 
+Enter a number within the range [0.0, 100.0]: aa
 
 Could not parse input (error: invalid float literal)
 Enter a number within the range [0.0, 100.0]: 1.
@@ -148,10 +148,10 @@ fn main() {
 	println!("You entered: \"{input}\"");
 }
 
-impl<'a> TryRead<'a> for PasswordInput {
+impl TryRead for PasswordInput {
 	type Output = String;
 	type Default = (); // ensure no default can be given
-	fn try_read_line(&self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
+	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> smart_read::BoxResult<Self::Output> {
 		if default.is_some() {return DefaultNotAllowedError::new_box_result();}
 		let prompt = prompt.unwrap_or_else(
 			|| format!("Enter a password (must have {}+ characters and have {}+ digits): ", self.min_len, self.min_digits)
@@ -162,11 +162,11 @@ impl<'a> TryRead<'a> for PasswordInput {
 			let password = read_stdin()?;
 			
 			if password.len() < 10 {
-				println!("Password must have at least 10 characters");
+				println!("Invalid, password must have at least 10 characters");
 				continue;
 			}
 			if password.chars().filter(|c| c.is_digit(10)).count() < 1 {
-				println!("Password must have at least 1 digit");
+				println!("Invalid, password must have at least 1 digit");
 				continue;
 			}
 			
