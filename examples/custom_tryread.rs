@@ -24,6 +24,7 @@ impl TryRead for PasswordInput {
 		);
 		loop {
 			
+			// you could also do `let password = try_prompt!(prompt)?;`
 			print!("{prompt}");
 			let password = read_stdin()?;
 			

@@ -46,7 +46,7 @@ fn main() {
 	let (index, input) = read!(["red", "green", "blue"]); // choose from a list of options
 	println!("You entered: index {index}, \"{input}\"");
 	println!("\n==== `read!(= \"red\", \"green\", \"blue\")` ====");
-	let (index, input) = read!(= "red", "green", "blue"); // some inputs have special syntax
+	let (index, input) = read!(= "red", "green", "blue"); // some inputs types have special syntax
 	println!("You entered: index {index}, \"{input}\"");
 	
 	println!("\n==== `read!([InputOption::new(...), ...])` ====");
@@ -83,6 +83,7 @@ fn main() {
 	
 	
 	println!();
-	prompt!("read_lines example finished, press enter to exit.");
+	println!("read_lines example finished");
+	wait_for_enter();
 	
 }

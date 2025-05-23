@@ -3,8 +3,12 @@ use std::{collections::{LinkedList, VecDeque}, ops::Deref};
 
 
 
-// NOTE: the returned usize has to be less than the length of input_options
-fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<usize> {
+/// Internal utility function
+/// 
+/// The returned `usize` is always less than the length of `input_options`
+/// 
+/// If `input_options` is empty, it will return `ListConstraintError::EmptyList`
+pub fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, default: Option<usize>) -> BoxResult<usize> {
 	if input_options.is_empty() {return Err(Box::new(ListConstraintError::EmptyList));}
 	
 	// get prompt data
@@ -16,7 +20,7 @@ fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, 
 		})
 		.collect::<Vec<_>>();
 	
-	// lists for string to match against, which option that string goes with, and whether that string is an alt_name
+	// combine all accepted strings into vecs which define the strings to match against, which options the strings go with, and which strings are visible
 	let (mut all_choose_strings, mut choose_name_mappings, mut choose_name_hidden_flags) = (vec!(), vec!(), vec!());
 	for (i, option) in input_options.iter().enumerate() {
 		if let Some(bulletin_string) = option.bulletin_string.as_deref() {
@@ -59,7 +63,7 @@ fn read_list<Data>(input_options: &[InputOption<Data>], prompt: Option<String>, 
 			return Ok(default);
 		}
 		
-		// find exact match
+		// search for exact match
 		for (i, option) in all_choose_strings.iter().enumerate() {
 			if option.eq_ignore_ascii_case(&input) {
 				let chosen_index = choose_name_mappings[i];
@@ -129,7 +133,9 @@ impl<Data, const LEN: usize> TryRead for [InputOption<Data>; LEN] {
 
 
 
-/// Error type
+/// Error type for list constraints
+/// 
+/// Right now there's only one error type, but there may be more in the future
 #[derive(Debug)]
 pub enum ListConstraintError {
 	/// This exists because an empty list would be a softlock
@@ -141,7 +147,7 @@ impl Error for ListConstraintError {}
 impl Display for ListConstraintError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::EmptyList => write!(f, "List Constraint is empty"),
+			Self::EmptyList => write!(f, "List of options cannot be empty"),
 		}
 	}
 }
@@ -282,7 +288,7 @@ impl<'a, T: Display> TryRead for &'a [T] {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+		let chosen_index = options.try_read_line(prompt, default)?.0;
 		Ok((chosen_index, &self[chosen_index]))
 	}
 }
@@ -302,7 +308,7 @@ impl<'a, T: Display> TryRead for &'a [T] {
 //				}
 //			})
 //			.collect::<Vec<_>>();
-//		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+//		let chosen_index = options.try_read_line(prompt, default)?.0;
 //		Ok((chosen_index, &self[chosen_index]))
 //	}
 //}
@@ -320,8 +326,8 @@ impl<T: Display, const LEN: usize> TryRead for [T; LEN] {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
-		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: (&[InputOption<_>]).try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
@@ -339,7 +345,7 @@ impl<T: Display> TryRead for Vec<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
+		let chosen_index = options.try_read_line(prompt, default)?.0;
 		Ok((chosen_index, self.swap_remove(chosen_index)))
 	}
 }
@@ -357,8 +363,8 @@ impl<T: Display> TryRead for VecDeque<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
-		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: (&[InputOption<_>]).try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.swap_remove_back(chosen_index).expect("chosen index is out of bounds")))
 	}
 }
@@ -376,8 +382,8 @@ impl<T: Display> TryRead for LinkedList<T> {
 				}
 			})
 			.collect::<Vec<_>>();
-		let chosen_index = (options.deref()).try_read_line(prompt, default)?.0;
-		#[allow(clippy::expect_used)] // REASON: Vec<InputOption<_>>.try_Read_line().0 is always less than the length of the given vec
+		let chosen_index = options.try_read_line(prompt, default)?.0;
+		#[allow(clippy::expect_used)] // REASON: (&[InputOption<_>]).try_Read_line().0 is always less than the length of the given vec
 		Ok((chosen_index, self.into_iter().nth(chosen_index).expect("chosen index is out of bounds")))
 	}
 }

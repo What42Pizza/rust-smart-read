@@ -4,18 +4,14 @@ use std::{ops::{Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo, RangeToI
 
 
 /// Internal utility function
-pub fn read_range<T, R>(range: R, prompt: Option<String>, default: Option<T>, format: fn(&R) -> String) -> BoxResult<T>
+pub fn read_range<T, R>(range: R, mut prompt: String, default: Option<T>) -> BoxResult<T>
 where
 	T: Display + FromStr + PartialOrd<T>,
 	R: RangeBounds<T>,
 	<T as FromStr>::Err: Display,
 {
-	let mut prompt = match prompt {
-		Some(v) => v,
-		None => format!("Enter a number within the range {}: ", format(&range)),
-	};
 	if let Some(default) = default.as_ref() {
-		prompt += &format!(" (default: {default})");
+		prompt += &format!("(default: {default}) ");
 	}
 	loop {
 		
@@ -29,7 +25,7 @@ where
 			Ok(v) => v,
 			Err(err) => {
 				println!();
-				println!("Could not parse input (error: {err})");
+				println!("Could not parse input ({err})");
 				continue;
 			}
 		};
@@ -52,10 +48,8 @@ where
 	type Output = T;
 	type Default = T;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		fn format(range: &Range<impl Display>) -> String {
-			format!("[{:.1}, {:.1})", range.start, range.end)
-		}
-		read_range(self, prompt, default, format)
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a number within the range [{:.1}, {:.1}): ", self.start, self.end));
+		read_range(self, prompt, default)
 	}
 }
 
@@ -67,10 +61,8 @@ where
 	type Output = T;
 	type Default = T;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		fn format(range: &RangeInclusive<impl Display>) -> String {
-			format!("[{:.1}, {:.1}]", range.start(), range.end())
-		}
-		read_range(self, prompt, default, format)
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a number within the range [{:.1}, {:.1}]: ", self.start(), self.end()));
+		read_range(self, prompt, default)
 	}
 }
 
@@ -82,10 +74,8 @@ where
 	type Output = T;
 	type Default = T;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		fn format(range: &RangeTo<impl Display>) -> String {
-			format!(".., {:.1})", range.end)
-		}
-		read_range(self, prompt, default, format)
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a number which is less than {:.1}: ", self.end));
+		read_range(self, prompt, default)
 	}
 }
 
@@ -97,10 +87,8 @@ where
 	type Output = T;
 	type Default = T;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		fn format(range: &RangeFrom<impl Display>) -> String {
-			format!("[{:.1}, ..", range.start)
-		}
-		read_range(self, prompt, default, format)
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a number which is at least {:.1}", self.start));
+		read_range(self, prompt, default)
 	}
 }
 
@@ -112,9 +100,7 @@ where
 	type Output = T;
 	type Default = T;
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Output>) -> BoxResult<Self::Output> {
-		fn format(range: &RangeToInclusive<impl Display>) -> String {
-			format!(".., {:.1}]", range.end)
-		}
-		read_range(self, prompt, default, format)
+		let prompt = prompt.unwrap_or_else(|| format!("Enter a number which is at most {:.1}: ", self.end));
+		read_range(self, prompt, default)
 	}
 }

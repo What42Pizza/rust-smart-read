@@ -163,6 +163,7 @@ pub mod prelude {
 		try_read,
 		prompt,
 		try_prompt,
+		wait_for_enter,
 		basics::*,
 		input_validation::*,
 		list_constraints::*,
@@ -273,7 +274,7 @@ pub type BoxResult<T> = Result<T, Box<dyn Error>>;
 pub trait TryRead {
 	/// Defines the output type of `read` and `prompt` macros
 	type Output;
-	/// Defines the output type of the default input
+	/// Defines the type of the default input
 	type Default;
 	/// This is what's called by the `read` and `prompt` macros
 	fn try_read_line(self, prompt: Option<String>, default: Option<Self::Default>) -> BoxResult<Self::Output>;
@@ -288,7 +289,7 @@ pub trait TryRead {
 
 
 /// Utility function, mostly for internal use
-pub fn read_stdin() -> BoxResult<String> {
+pub fn read_stdin() -> Result<String, std::io::Error> {
 	std::io::stdout().flush()?;
 	let mut output = String::new();
 	std::io::stdin().read_line(&mut output)?;

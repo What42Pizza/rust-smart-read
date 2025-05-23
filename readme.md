@@ -52,14 +52,14 @@ let input = prompt!("Confirm input: "; [true] YesNoInput);
 
 // choose from a list of options:
 let (index, input) = read!(["red", "green", "blue"]);
-// some input types have special syntax:
+// some inputs types have special syntax:
 let (index, input) = read!(= "red", "green", "blue");
 
 // give options bulletins, alternate matching strings, and extra data:
 let (index, input) = read!([
-	InputOption::new("1", vec!("red"  , "r", "choose first" ), ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
-	InputOption::new("2", vec!("green", "g", "choose second"), ()),
-	InputOption::new("3", vec!("blue" , "b", "choose third" ), ()),
+	InputOption::new("1", &["red"  , "r", "choose first" ], ()), // displayed as "1: red", can be chosen with "1", "red", "r", or "choose first"
+	InputOption::new("2", &["green", "g", "choose second"], ()),
+	InputOption::new("3", &["blue" , "b", "choose third" ], ()),
 ]);
 
 // same as above, but using special syntax:
@@ -161,6 +161,7 @@ impl TryRead for PasswordInput {
 		);
 		loop {
 			
+			// you could also do `let password = try_prompt!(prompt)?;`
 			print!("{prompt}");
 			let password = read_stdin()?;
 			
